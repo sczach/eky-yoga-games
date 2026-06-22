@@ -40,27 +40,6 @@
             border-color: #2d6a4f;
         }
 
-        .breath-orb {
-            width: 220px;
-            height: 220px;
-            background: linear-gradient(135deg, #40916c, #2d6a4f);
-            border-radius: 9999px;
-            box-shadow: 0 0 60px rgba(64, 145, 108, 0.5),
-                        inset 40px 40px 60px rgba(255,255,255,0.25),
-                        inset -30px -30px 50px rgba(0,0,0,0.3);
-            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .breath-orb.inhale {
-            transform: scale(1.15);
-        }
-        .breath-orb.exhale {
-            transform: scale(0.85);
-        }
-
         .pose-item {
             transition: all 0.3s ease;
         }
@@ -92,6 +71,62 @@
 
         .calm-bg {
             background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+        }
+
+        /* ===== Sun Salutation clock ===== */
+        .breath-stage-wrap {
+            width: 560px;
+            max-width: 100%;
+        }
+        .breath-stage {
+            position: relative;
+            width: 100%;
+            padding-top: 100%;   /* forces a perfect square; children are absolute */
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .clock-label {
+            position: absolute;
+            width: 88px;
+            text-align: center;
+            transform: translate(-50%, -50%);
+            transition: color .3s ease, transform .3s ease;
+            color: #94a3b8;
+            line-height: 1.05;
+            pointer-events: none;
+        }
+        .clock-label .lbl-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px; height: 20px;
+            border-radius: 9999px;
+            background: #e2e8f0;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 3px;
+            transition: all .3s ease;
+        }
+        .clock-label .lbl-name {
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: .2px;
+        }
+        .clock-label.done { color: #059669; }
+        .clock-label.done .lbl-num { background: #d1fae5; color: #047857; }
+        .clock-label.active {
+            color: #0369a1;
+            transform: translate(-50%, -50%) scale(1.12);
+        }
+        .clock-label.active .lbl-num {
+            background: #0284c7; color: #fff;
+            box-shadow: 0 0 0 4px rgba(2,132,199,.18);
+        }
+        #figure-svg { overflow: visible; }
+        #figure-svg .breath-ring {
+            transition: r .15s linear, opacity .3s ease;
         }
     </style>
 </head>
@@ -191,7 +226,7 @@
                         </div>
                     </div>
                     <h4 class="text-3xl font-semibold tracking-tight mb-3">Sun Salutation Breath</h4>
-                    <p class="text-slate-600 mb-6">A guided flowing practice. Watch the breath orb and click to transition poses at the perfect moment.</p>
+                    <p class="text-slate-600 mb-6">Breathe a silhouette through all 12 poses of Surya Namaskar. Hold the arrow keys (or drag) to inhale &amp; exhale your way around the clock.</p>
                     <div class="flex items-center text-sm text-sky-700 font-medium">
                         <span>Begin your flow</span> 
                         <i class="fa-solid fa-chevron-right ml-2 group-hover:ml-3 transition-all"></i>
@@ -250,67 +285,72 @@
         </div>
 
         <!-- SUN SAL BREATH GAME -->
-        <div id="breath-game" class="section bg-white border border-slate-200 rounded-3xl p-8 md:p-10 shadow-sm">
-            <div class="flex items-center justify-between mb-8">
+        <div id="breath-game" class="section bg-white border border-slate-200 rounded-3xl p-6 md:p-10 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center gap-x-4">
                     <button onclick="hideGame()" class="text-sky-700 hover:text-sky-900 p-2 -ml-2"><i class="fa-solid fa-arrow-left text-xl"></i></button>
                     <div>
                         <h3 class="text-3xl font-semibold tracking-tight">Sun Salutation Breath Game</h3>
-                        <p class="text-sky-700 text-sm">Let your breath guide the flow • Click to transition</p>
+                        <p class="text-sky-700 text-sm">Hold <b>&uarr;</b> to inhale &bull; <b>&darr;</b> to exhale &bull; flow without pausing</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <div class="text-sm text-slate-500">Accuracy</div>
+                    <div class="text-sm text-slate-500">Flow</div>
                     <div id="breath-accuracy" class="text-4xl font-semibold tabular-nums text-sky-700">--</div>
                 </div>
             </div>
 
-            <div class="max-w-md mx-auto">
-                <!-- Breath Visual -->
-                <div class="flex justify-center mb-8">
-                    <div id="breath-orb" 
-                         class="breath-orb flex-shrink-0 cursor-pointer"
-                         onclick="handleBreathClick()">
-                        <div class="text-center">
-                            <div id="breath-phase-text" class="text-white text-xl font-semibold tracking-wider">INHALE</div>
-                            <div id="breath-count" class="text-white/90 text-5xl font-light tabular-nums mt-1">4</div>
-                        </div>
+            <!-- Live breath prompt -->
+            <div id="breath-prompt" class="text-center text-sky-700 font-medium mb-4 min-h-[24px]">
+                Press <b>Start Flow</b>, then hold the arrow keys to breathe through the poses.
+            </div>
+
+            <!-- The clock stage -->
+            <div class="flex justify-center px-4">
+              <div class="breath-stage-wrap">
+                <div id="breath-stage" class="breath-stage" tabindex="0">
+                    <svg viewBox="0 0 560 560" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none">
+                        <circle cx="280" cy="280" r="215" fill="none" stroke="#e2e8f0" stroke-width="6"/>
+                        <path id="progress-arc" d="" fill="none" stroke="#0284c7" stroke-width="7" stroke-linecap="round"/>
+                    </svg>
+                    <div id="clock-labels" style="position:absolute;inset:0;pointer-events:none"></div>
+                    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none">
+                        <svg id="figure-svg" viewBox="0 0 200 220" style="width:220px;height:242px"></svg>
+                        <div id="breath-phase" class="text-xs font-semibold tracking-[3px] text-sky-600" style="margin-top:4px">&mdash;</div>
+                    </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Current / Next + controls -->
+            <div class="max-w-md mx-auto mt-6">
+                <div class="bg-slate-50 border border-slate-200 rounded-3xl p-5 mb-5 flex justify-between items-center gap-4">
+                    <div>
+                        <div class="text-xs uppercase tracking-widest text-slate-500 mb-px">Current Pose</div>
+                        <div id="current-pose" class="text-xl font-semibold text-emerald-900">Mountain / Prayer</div>
+                        <div id="current-pose-sanskrit" class="text-emerald-700 text-sm">Pranamasana</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs uppercase tracking-widest text-slate-500 mb-px">Next</div>
+                        <div id="next-pose" class="font-medium text-sm leading-tight">Raised Arms <span class="text-slate-400">(Hasta Uttanasana)</span></div>
                     </div>
                 </div>
 
-                <!-- Current & Next Pose -->
-                <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6 mb-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <div>
-                            <div class="text-xs uppercase tracking-widest text-slate-500 mb-px">Current Pose</div>
-                            <div id="current-pose" class="text-2xl font-semibold text-emerald-900">Mountain Pose</div>
-                            <div id="current-pose-sanskrit" class="text-emerald-700">Tadasana</div>
-                        </div>
-                        <i class="fa-solid fa-person text-5xl text-emerald-300"></i>
-                    </div>
-                    
-                    <div class="border-t border-slate-200 pt-4 mt-4">
-                        <div class="text-xs uppercase tracking-widest text-slate-500 mb-1.5">Next Pose</div>
-                        <div id="next-pose" class="font-medium text-lg">Forward Fold <span class="text-slate-400 text-base">(Uttanasana)</span></div>
-                    </div>
-                </div>
-
-                <!-- Controls -->
                 <div class="flex gap-3">
                     <button onclick="startBreathGame()" id="start-breath-btn"
                             class="flex-1 py-3.5 bg-sky-600 hover:bg-sky-700 transition-colors text-white font-semibold rounded-3xl flex items-center justify-center gap-x-2">
-                        <i class="fa-solid fa-play mr-1"></i> 
+                        <i class="fa-solid fa-play mr-1"></i>
                         <span>Start Flow</span>
                     </button>
-                    <button onclick="resetBreathGame()" 
+                    <button onclick="resetBreathGame()"
                             class="px-6 py-3.5 border border-slate-300 hover:bg-slate-50 transition-colors font-medium rounded-3xl">
                         Reset
                     </button>
                 </div>
 
-                <div id="breath-instructions" class="mt-5 text-center text-sm text-slate-500">
-                    Watch the orb expand &amp; contract with your breath.<br>
-                    Click the orb or "Transition" when you feel ready to move to the next pose.
+                <div id="breath-instructions" class="mt-4 text-center text-sm text-slate-500">
+                    Hold the <b>Up arrow</b> (or drag the figure up) to inhale, the <b>Down arrow</b> (drag down) to exhale.
+                    Each pose is carried by one breath &mdash; keep it smooth and unbroken for the best Flow score.
                 </div>
             </div>
         </div>
@@ -342,7 +382,7 @@
                     initMatchGame();
                 }
                 if (gameId === 'breath-game' && !window.breathGameInitialized) {
-                    // ready to start
+                    initBreathGame();
                 }
             }
         }
@@ -524,170 +564,341 @@
             }
         }
 
-        // ========== SUN SAL BREATH GAME ==========
-        let breathInterval = null;
-        let currentPhase = 0; // 0=inhale, 1=exhale
-        let breathCount = 4;
-        let currentPoseIndex = 0;
-        let correctTransitions = 0;
-        let totalAttempts = 0;
-        let gameRunning = false;
+        // ========== SUN SALUTATION BREATH GAME ==========
+        // The classic 12-pose Surya Namaskar. Each pose is defined as a profile
+        // skeleton; we interpolate between consecutive poses as the breath fills,
+        // so the central silhouette smoothly morphs from one shape to the next.
+        // Each joint is [x, y] in a 0..200 (x) / 0..220 (y) viewBox, figure facing right.
 
+        const P1 = { en: "Mountain / Prayer", n: "Pranamasana", breath: "start",
+            hip:[100,135], sh:[100,82], head:[100,52],
+            aF:{e:[93,106],h:[103,98]}, aB:{e:[91,106],h:[100,98]},
+            lF:{k:[104,168],f:[104,205]}, lB:{k:[96,168],f:[96,205]} };
+        const P2 = { en: "Raised Arms", n: "Hasta Uttanasana", breath: "inhale",
+            hip:[100,135], sh:[103,80], head:[107,52],
+            aF:{e:[105,53],h:[104,24]}, aB:{e:[101,53],h:[100,24]},
+            lF:{k:[101,168],f:[100,205]}, lB:{k:[99,168],f:[100,205]} };
+        const P3 = { en: "Forward Fold", n: "Uttanasana", breath: "exhale",
+            hip:[100,130], sh:[118,118], head:[125,134],
+            aF:{e:[123,150],h:[120,192]}, aB:{e:[120,150],h:[117,192]},
+            lF:{k:[101,165],f:[99,205]}, lB:{k:[99,165],f:[98,205]} };
+        const P4 = { en: "Low Lunge", n: "Ashwa Sanchalanasana", breath: "inhale",
+            hip:[92,138], sh:[92,96], head:[92,70],
+            aF:{e:[105,158],h:[112,198]}, aB:{e:[103,158],h:[110,198]},
+            lF:{k:[126,168],f:[132,205]}, lB:{k:[62,182],f:[38,205]} };
+        const P5 = { en: "Plank", n: "Phalakasana", breath: "exhale",
+            hip:[100,142], sh:[142,118], head:[160,110],
+            aF:{e:[143,160],h:[146,198]}, aB:{e:[140,160],h:[143,198]},
+            lF:{k:[72,162],f:[40,188]}, lB:{k:[70,164],f:[38,190]} };
+        const P6 = { en: "Knees-Chest-Chin", n: "Ashtanga Namaskara", breath: "exhale",
+            hip:[100,152], sh:[140,150], head:[158,146],
+            aF:{e:[141,170],h:[144,198]}, aB:{e:[139,170],h:[142,198]},
+            lF:{k:[74,178],f:[44,196]}, lB:{k:[72,180],f:[42,197]} };
+        const P7 = { en: "Cobra", n: "Bhujangasana", breath: "inhale",
+            hip:[88,178], sh:[122,142], head:[137,120],
+            aF:{e:[123,172],h:[127,198]}, aB:{e:[120,172],h:[124,198]},
+            lF:{k:[62,188],f:[34,198]}, lB:{k:[60,189],f:[32,199]} };
+        const P8 = { en: "Downward Dog", n: "Adho Mukha Svanasana", breath: "exhale",
+            hip:[82,92], sh:[120,150], head:[127,162],
+            aF:{e:[124,172],h:[132,198]}, aB:{e:[121,172],h:[129,198]},
+            lF:{k:[58,150],f:[42,198]}, lB:{k:[56,151],f:[40,199]} };
+
+        // Second half mirrors the first: lunge, fold, raised arms, mountain.
         const sunSalPoses = [
-            { name: "Mountain Pose", sanskrit: "Tadasana", breath: "inhale" },
-            { name: "Forward Fold", sanskrit: "Uttanasana", breath: "exhale" },
-            { name: "Halfway Lift", sanskrit: "Ardha Uttanasana", breath: "inhale" },
-            { name: "Plank Pose", sanskrit: "Phalakasana", breath: "exhale" },
-            { name: "Upward-Facing Dog", sanskrit: "Urdhva Mukha Svanasana", breath: "inhale" },
-            { name: "Downward-Facing Dog", sanskrit: "Adho Mukha Svanasana", breath: "exhale" },
-            { name: "Forward Fold", sanskrit: "Uttanasana", breath: "inhale" },
-            { name: "Mountain Pose", sanskrit: "Tadasana", breath: "exhale" }
+            P1, P2, P3, P4, P5, P6, P7, P8,
+            { ...P4 },                       // 9  Low Lunge (other leg) - inhale
+            { ...P3 },                       // 10 Forward Fold - exhale
+            { ...P2 },                       // 11 Raised Arms - inhale
+            { ...P1, breath: "exhale" }      // 12 Mountain - exhale
         ];
+        const N = sunSalPoses.length; // 12
 
-        function updateBreathDisplay() {
-            const orb = document.getElementById('breath-orb');
-            const phaseText = document.getElementById('breath-phase-text');
-            const countEl = document.getElementById('breath-count');
+        // ----- runtime state -----
+        let bIndex = 0;            // index of the pose we are currently resting in
+        let bProgress = 0;         // 0..1 fill of the breath carrying us to the next pose
+        let activeDir = null;      // 'up' | 'down' | null  (user breath input)
+        let bRunning = false;
+        let bFinished = false;
+        let bStarted = false;
+        let raf = null, lastT = 0;
+        let smoothCurrent = true;  // did the current transition stay unbroken?
+        let transitionCount = 0, smoothCount = 0;
 
-            if (!orb || !phaseText || !countEl) return;
+        const FILL_RATE  = 0.5;    // fraction filled per second when breathing correctly (~2s/pose)
+        const DECAY_RATE = 0.8;    // how fast a paused/reversed breath drains back
 
-            const pose = sunSalPoses[currentPoseIndex];
-            
-            if (currentPhase === 0) { // Inhale
-                orb.classList.remove('exhale');
-                orb.classList.add('inhale');
-                phaseText.textContent = 'INHALE';
-                phaseText.style.color = '#bae6fd';
-            } else {
-                orb.classList.remove('inhale');
-                orb.classList.add('exhale');
-                phaseText.textContent = 'EXHALE';
-                phaseText.style.color = '#7dd3fc';
+        // direction required to flow INTO the next pose
+        function requiredDir() {
+            if (bIndex >= N - 1) return null;
+            return sunSalPoses[bIndex + 1].breath === 'inhale' ? 'up' : 'down';
+        }
+
+        // ---- geometry helpers ----
+        function polar(cx, cy, r, deg) {
+            const a = deg * Math.PI / 180;
+            return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+        }
+        function arcPath(deg) {
+            if (deg <= 0.1) return '';
+            const r = 215, cx = 280, cy = 280;
+            const f = p => p[0].toFixed(2) + ' ' + p[1].toFixed(2);
+            // A single SVG arc can't draw a full circle (start ≈ end is degenerate),
+            // so close the loop with two half-circle arcs.
+            if (deg >= 359.9) {
+                const top = polar(cx, cy, r, 0), bot = polar(cx, cy, r, 180);
+                return `M ${f(top)} A ${r} ${r} 0 1 1 ${f(bot)} A ${r} ${r} 0 1 1 ${f(top)}`;
             }
+            const s = polar(cx, cy, r, 0);
+            const e = polar(cx, cy, r, deg);
+            const large = deg > 180 ? 1 : 0;
+            return `M ${f(s)} A ${r} ${r} 0 ${large} 1 ${f(e)}`;
+        }
+        const easeInOut = t => t * t * (3 - 2 * t);
 
-            countEl.textContent = breathCount;
+        function lerpPose(a, b, e) {
+            const L = (p, q) => [p[0] + (q[0] - p[0]) * e, p[1] + (q[1] - p[1]) * e];
+            return {
+                hip: L(a.hip, b.hip), sh: L(a.sh, b.sh), head: L(a.head, b.head),
+                aF: { e: L(a.aF.e, b.aF.e), h: L(a.aF.h, b.aF.h) },
+                aB: { e: L(a.aB.e, b.aB.e), h: L(a.aB.h, b.aB.h) },
+                lF: { k: L(a.lF.k, b.lF.k), f: L(a.lF.f, b.lF.f) },
+                lB: { k: L(a.lB.k, b.lB.k), f: L(a.lB.f, b.lB.f) }
+            };
+        }
 
-            // Update pose display
-            document.getElementById('current-pose').textContent = pose.name;
-            document.getElementById('current-pose-sanskrit').textContent = pose.sanskrit;
+        function drawFigure(j) {
+            const svg = document.getElementById('figure-svg');
+            if (!svg) return;
+            const seg = (a, b) => `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}"/>`;
+            const poly = (...pts) => `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}"/>`;
+            svg.innerHTML = `
+                <circle class="breath-ring" cx="${j.head[0].toFixed(1)}" cy="${(j.head[1]+0).toFixed(1)}" r="0" fill="none"/>
+                <g stroke="#15463a" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                    ${poly(j.hip, j.lB.k, j.lB.f)}
+                    ${poly(j.sh, j.aB.e, j.aB.h)}
+                    ${seg(j.hip, j.sh)}
+                    ${poly(j.hip, j.lF.k, j.lF.f)}
+                    ${poly(j.sh, j.aF.e, j.aF.h)}
+                    ${seg(j.sh, j.head)}
+                </g>
+                <circle cx="${j.head[0].toFixed(1)}" cy="${j.head[1].toFixed(1)}" r="13" fill="#15463a"/>`;
+        }
 
-            // Next pose preview
-            const nextIndex = (currentPoseIndex + 1) % sunSalPoses.length;
-            const nextPose = sunSalPoses[nextIndex];
-            document.getElementById('next-pose').innerHTML = `${nextPose.name} <span class="text-slate-400 text-base">(${nextPose.sanskrit})</span>`;
+        // ---- build the 12 static clock labels once ----
+        function buildClockLabels() {
+            const wrap = document.getElementById('clock-labels');
+            if (!wrap || wrap.dataset.built) return;
+            wrap.innerHTML = '';
+            const R = 240, SIZE = 560;
+            for (let i = 0; i < N; i++) {
+                const [x, y] = polar(280, 280, R, i * 30);
+                const el = document.createElement('div');
+                el.className = 'clock-label';
+                el.dataset.index = i;
+                el.style.left = (x / SIZE * 100) + '%';
+                el.style.top  = (y / SIZE * 100) + '%';
+                el.innerHTML = `<div class="lbl-num">${i + 1}</div><div class="lbl-name">${sunSalPoses[i].en}</div>`;
+                wrap.appendChild(el);
+            }
+            wrap.dataset.built = '1';
+        }
+
+        function updateLabels() {
+            document.querySelectorAll('#clock-labels .clock-label').forEach(el => {
+                const i = parseInt(el.dataset.index);
+                el.classList.toggle('done', bFinished || i < bIndex);
+                el.classList.toggle('active', !bFinished && i === bIndex);
+            });
+        }
+
+        function updatePoseInfo() {
+            const cur = sunSalPoses[bIndex];
+            document.getElementById('current-pose').textContent = cur.en;
+            document.getElementById('current-pose-sanskrit').textContent = cur.n;
+
+            const nextEl = document.getElementById('next-pose');
+            const promptEl = document.getElementById('breath-prompt');
+            const phaseEl = document.getElementById('breath-phase');
+
+            if (bFinished) {
+                nextEl.innerHTML = '<span class="text-emerald-600">Flow complete</span>';
+                promptEl.innerHTML = 'Beautiful — you breathed the whole salutation. 🙏';
+                phaseEl.textContent = 'NAMASTE';
+                phaseEl.style.color = '#059669';
+                return;
+            }
+            const nx = sunSalPoses[bIndex + 1];
+            nextEl.innerHTML = `${nx.en} <span class="text-slate-400">(${nx.n})</span>`;
+
+            const req = requiredDir();
+            if (!bRunning) {
+                promptEl.innerHTML = bStarted
+                    ? 'Paused — press <b>Resume</b> to keep flowing.'
+                    : 'Press <b>Start Flow</b>, then hold the arrow keys to breathe through the poses.';
+                phaseEl.textContent = '—';
+                phaseEl.style.color = '#0284c7';
+            } else if (req === 'up') {
+                promptEl.innerHTML = `Hold <b>&uarr;</b> — <b>inhale</b> into ${nx.en}`;
+                phaseEl.textContent = 'INHALE ↑';
+                phaseEl.style.color = '#0284c7';
+            } else {
+                promptEl.innerHTML = `Hold <b>&darr;</b> — <b>exhale</b> into ${nx.en}`;
+                phaseEl.textContent = 'EXHALE ↓';
+                phaseEl.style.color = '#0369a1';
+            }
+        }
+
+        function render() {
+            const a = sunSalPoses[bIndex];
+            const b = sunSalPoses[Math.min(bIndex + 1, N - 1)];
+            drawFigure(lerpPose(a, b, easeInOut(bProgress)));
+
+            // progress arc grows continuously as the breath fills the transition
+            const angle = bFinished ? 360 : (bIndex + bProgress) * 30;
+            const arc = document.getElementById('progress-arc');
+            if (arc) arc.setAttribute('d', arcPath(angle));
+        }
+
+        function commitTransition() {
+            bIndex++;
+            transitionCount++;
+            if (smoothCurrent) smoothCount++;
+            bProgress = 0;
+            smoothCurrent = true;
+
+            const flow = Math.round((smoothCount / transitionCount) * 100);
+            document.getElementById('breath-accuracy').textContent = flow + '%';
+
+            if (bIndex >= N - 1) {
+                bFinished = true;
+                bRunning = false;
+                activeDir = null;
+                document.getElementById('progress-arc').setAttribute('d', arcPath(360));
+                setStartButton('restart');
+                confetti();
+            }
+            updateLabels();
+            updatePoseInfo();
+        }
+
+        function loop(t) {
+            if (!lastT) lastT = t;
+            let dt = (t - lastT) / 1000;
+            lastT = t;
+            if (dt > 0.1) dt = 0.1; // clamp after tab switches
+
+            if (bRunning && !bFinished) {
+                const req = requiredDir();
+                if (activeDir === req && req) {
+                    bProgress += FILL_RATE * dt;
+                    if (bProgress >= 1) { bProgress = 1; commitTransition(); }
+                } else if (bProgress > 0) {
+                    // paused or reversed mid-breath — counts against smoothness
+                    if (bProgress > 0.04) smoothCurrent = false;
+                    bProgress -= DECAY_RATE * dt;
+                    if (bProgress < 0) bProgress = 0;
+                }
+            }
+            render();
+            raf = requestAnimationFrame(loop);
+        }
+
+        function setStartButton(mode) {
+            const btn = document.getElementById('start-breath-btn');
+            if (!btn) return;
+            if (mode === 'pause') {
+                btn.innerHTML = `<i class="fa-solid fa-pause mr-1"></i> <span>Pause</span>`;
+                btn.onclick = pauseBreathGame;
+            } else if (mode === 'restart') {
+                btn.innerHTML = `<i class="fa-solid fa-rotate-right mr-1"></i> <span>Flow Again</span>`;
+                btn.onclick = () => { resetBreathGame(); startBreathGame(); };
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-play mr-1"></i> <span>${mode === 'resume' ? 'Resume' : 'Start Flow'}</span>`;
+                btn.onclick = startBreathGame;
+            }
         }
 
         function startBreathGame() {
-            if (gameRunning) return;
-            gameRunning = true;
-            correctTransitions = 0;
-            totalAttempts = 0;
-            currentPoseIndex = 0;
-            currentPhase = 0;
-            breathCount = 4;
-
-            document.getElementById('start-breath-btn').innerHTML = `<i class="fa-solid fa-pause mr-2"></i> <span>Pause</span>`;
-            document.getElementById('start-breath-btn').onclick = pauseBreathGame;
-            document.getElementById('breath-instructions').innerHTML = 'Click the breathing orb when you are ready to transition to the next pose.';
-            document.getElementById('breath-accuracy').textContent = '--';
-
-            updateBreathDisplay();
-
-            // Start the breath cycle timer
-            if (breathInterval) clearInterval(breathInterval);
-            breathInterval = setInterval(() => {
-                breathCount--;
-                if (breathCount <= 0) {
-                    // Auto switch phase
-                    currentPhase = currentPhase === 0 ? 1 : 0;
-                    breathCount = 4;
-                    updateBreathDisplay();
-                } else {
-                    const countEl = document.getElementById('breath-count');
-                    if (countEl) countEl.textContent = breathCount;
-                }
-            }, 1000);
+            if (bRunning) return;
+            if (bFinished) resetBreathState();
+            bRunning = true;
+            bStarted = true;
+            lastT = 0;
+            if (!raf) raf = requestAnimationFrame(loop);
+            setStartButton('pause');
+            updateLabels();
+            updatePoseInfo();
         }
 
         function pauseBreathGame() {
-            gameRunning = false;
-            if (breathInterval) {
-                clearInterval(breathInterval);
-                breathInterval = null;
-            }
-            document.getElementById('start-breath-btn').innerHTML = `<i class="fa-solid fa-play mr-1"></i> <span>Resume</span>`;
-            document.getElementById('start-breath-btn').onclick = startBreathGame;
+            bRunning = false;
+            activeDir = null;
+            setStartButton('resume');
+            updatePoseInfo();
         }
 
-        function handleBreathClick() {
-            if (!gameRunning) {
-                startBreathGame();
-                return;
-            }
-
-            const currentPose = sunSalPoses[currentPoseIndex];
-            const expectedPhase = currentPose.breath === 'inhale' ? 0 : 1;
-
-            totalAttempts++;
-
-            if (currentPhase === expectedPhase) {
-                // Good timing!
-                correctTransitions++;
-                // Advance to next pose
-                currentPoseIndex = (currentPoseIndex + 1) % sunSalPoses.length;
-                currentPhase = sunSalPoses[currentPoseIndex].breath === 'inhale' ? 0 : 1;
-                breathCount = 4;
-
-                // Visual feedback
-                const orb = document.getElementById('breath-orb');
-                orb.style.boxShadow = '0 0 80px rgba(16, 185, 129, 0.7)';
-                setTimeout(() => {
-                    if (orb) orb.style.boxShadow = '0 0 60px rgba(64, 145, 108, 0.5), inset 40px 40px 60px rgba(255,255,255,0.25), inset -30px -30px 50px rgba(0,0,0,0.3)';
-                }, 600);
-
-                updateBreathDisplay();
-            } else {
-                // Off timing - gentle feedback
-                const orb = document.getElementById('breath-orb');
-                orb.style.boxShadow = '0 0 40px rgba(239, 68, 68, 0.5)';
-                setTimeout(() => {
-                    if (orb) orb.style.boxShadow = '0 0 60px rgba(64, 145, 108, 0.5), inset 40px 40px 60px rgba(255,255,255,0.25), inset -30px -30px 50px rgba(0,0,0,0.3)';
-                }, 500);
-            }
-
-            // Update accuracy
-            const accuracy = totalAttempts > 0 ? Math.round((correctTransitions / totalAttempts) * 100) : 0;
-            document.getElementById('breath-accuracy').textContent = accuracy + '%';
+        function resetBreathState() {
+            bIndex = 0; bProgress = 0; activeDir = null;
+            bRunning = false; bFinished = false; bStarted = false;
+            smoothCurrent = true; transitionCount = 0; smoothCount = 0;
+            document.getElementById('breath-accuracy').textContent = '--';
         }
 
         function resetBreathGame() {
-            if (breathInterval) clearInterval(breathInterval);
-            breathInterval = null;
-            gameRunning = false;
-            currentPoseIndex = 0;
-            currentPhase = 0;
-            breathCount = 4;
-            correctTransitions = 0;
-            totalAttempts = 0;
-
-            document.getElementById('start-breath-btn').innerHTML = `<i class="fa-solid fa-play mr-1"></i> <span>Start Flow</span>`;
-            document.getElementById('start-breath-btn').onclick = startBreathGame;
-            document.getElementById('breath-accuracy').textContent = '--';
-            document.getElementById('breath-instructions').innerHTML = 'Watch the orb expand &amp; contract with your breath.<br>Click the orb or "Transition" when you feel ready to move to the next pose.';
-
-            updateBreathDisplay();
+            resetBreathState();
+            setStartButton('start');
+            buildClockLabels();
+            updateLabels();
+            updatePoseInfo();
+            render();
         }
 
-        // Keyboard support
+        function initBreathGame() {
+            buildClockLabels();
+            resetBreathState();
+            setStartButton('start');
+            updateLabels();
+            updatePoseInfo();
+            render();
+            if (!raf) raf = requestAnimationFrame(loop);
+            window.breathGameInitialized = true;
+        }
+
+        // ---- input: keyboard ----
         document.addEventListener('keydown', function(e) {
-            if (currentGame === 'breath-game' && (e.key === ' ' || e.key === 'Enter')) {
-                e.preventDefault();
-                handleBreathClick();
-            }
-            if (e.key === 'Escape' && currentGame) {
-                hideGame();
-            }
+            if (e.key === 'Escape' && currentGame) { hideGame(); return; }
+            if (currentGame !== 'breath-game') return;
+            if (e.key === 'ArrowUp')   { e.preventDefault(); activeDir = 'up'; }
+            if (e.key === 'ArrowDown') { e.preventDefault(); activeDir = 'down'; }
         });
+        document.addEventListener('keyup', function(e) {
+            if (currentGame !== 'breath-game') return;
+            if (e.key === 'ArrowUp' && activeDir === 'up')   activeDir = null;
+            if (e.key === 'ArrowDown' && activeDir === 'down') activeDir = null;
+        });
+
+        // ---- input: click-and-drag the figure up / down ----
+        (function setupDrag() {
+            let dragging = false, startY = 0;
+            const stage = () => document.getElementById('breath-stage');
+            document.addEventListener('pointerdown', e => {
+                const s = stage();
+                if (!s || currentGame !== 'breath-game') return;
+                if (!s.contains(e.target)) return;
+                dragging = true; startY = e.clientY; activeDir = null;
+                s.focus({ preventScroll: true });
+            });
+            document.addEventListener('pointermove', e => {
+                if (!dragging) return;
+                const dy = startY - e.clientY;       // up = positive
+                if (dy > 10) activeDir = 'up';
+                else if (dy < -10) activeDir = 'down';
+                else activeDir = null;
+            });
+            const end = () => { if (dragging) { dragging = false; activeDir = null; } };
+            document.addEventListener('pointerup', end);
+            document.addEventListener('pointercancel', end);
+        })();
 
         // Boot
         function boot() {
