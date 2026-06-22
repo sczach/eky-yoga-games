@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EKY Yoga Games | Play & Learn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Playfair+Display:wght@700&amp;display=swap');
+        
+        :root {
+            --primary: #2d6a4f;
+            --accent: #40916c;
+            --soft: #d8f3dc;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .heading-serif {
+            font-family: 'Playfair Display', Georgia, serif;
+        }
+
+        .yoga-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .yoga-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .game-tab {
+            transition: all 0.2s ease;
+        }
+        .game-tab.active {
+            background-color: #2d6a4f;
+            color: white;
+            border-color: #2d6a4f;
+        }
+
+        .breath-orb {
+            width: 220px;
+            height: 220px;
+            background: linear-gradient(135deg, #40916c, #2d6a4f);
+            border-radius: 9999px;
+            box-shadow: 0 0 60px rgba(64, 145, 108, 0.5),
+                        inset 40px 40px 60px rgba(255,255,255,0.25),
+                        inset -30px -30px 50px rgba(0,0,0,0.3);
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .breath-orb.inhale {
+            transform: scale(1.15);
+        }
+        .breath-orb.exhale {
+            transform: scale(0.85);
+        }
+
+        .pose-item {
+            transition: all 0.3s ease;
+        }
+        .pose-item.active {
+            background-color: #d8f3dc;
+            border-color: #2d6a4f;
+            transform: scale(1.02);
+        }
+
+        .match-card {
+            cursor: pointer;
+            user-select: none;
+        }
+        .match-card.selected {
+            border-color: #2d6a4f;
+            box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.2);
+        }
+        .match-card.matched {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+
+        .calm-bg {
+            background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="w-11 h-11 bg-emerald-800 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-spa text-white text-3xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-semibold tracking-tight heading-serif text-emerald-900">EKY Yoga</h1>
+                    <p class="text-xs text-emerald-700 -mt-1">GAMES</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-x-4">
+                <div class="hidden md:flex items-center gap-x-2 text-sm">
+                    <div class="px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-3xl text-xs font-medium flex items-center gap-x-1.5">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                        <span>Breath • Body • Awareness</span>
+                    </div>
+                </div>
+                <button onclick="window.open('https://github.com/sczach/eky-yoga-games', '_blank')" 
+                        class="flex items-center gap-x-2 px-4 py-2 text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors">
+                    <i class="fa-brands fa-github"></i>
+                    <span class="hidden sm:inline">GitHub</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-6xl mx-auto px-6 pt-10 pb-16">
+        <!-- Hero / Intro -->
+        <div class="text-center max-w-2xl mx-auto mb-12">
+            <div class="inline-flex items-center gap-x-2 px-4 py-1.5 bg-white rounded-3xl shadow-sm border border-emerald-100 mb-4">
+                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span class="text-sm font-medium text-emerald-700">Part of EKY Yoga Co. LLC • Eastern Kentucky</span>
+            </div>
+            
+            <h2 class="text-5xl md:text-6xl font-semibold tracking-tighter heading-serif text-emerald-950 mb-4">Move. Breathe.<br>Learn through play.</h2>
+            <p class="text-xl text-slate-600 max-w-md mx-auto">Beautiful, calming browser games that help you connect with yoga poses and the power of your breath.</p>
+            
+            <div class="flex flex-wrap justify-center gap-3 mt-8">
+                <button onclick="document.getElementById('games-section').scrollIntoView({ behavior: 'smooth' })" 
+                        class="px-8 py-3.5 bg-emerald-800 hover:bg-emerald-900 transition-all text-white font-semibold rounded-3xl flex items-center justify-center gap-x-2 shadow-lg shadow-emerald-900/30">
+                    <span>Start Playing</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <button onclick="showGame('breath-game')" 
+                        class="px-6 py-3.5 border border-emerald-300 hover:bg-emerald-50 transition-all font-medium rounded-3xl flex items-center gap-x-2">
+                    <i class="fa-solid fa-wind"></i>
+                    <span>Try Sun Sal Breath Game</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Games Hub -->
+        <div id="games-section" class="mb-8">
+            <div class="flex items-end justify-between mb-6">
+                <div>
+                    <h3 class="text-3xl font-semibold tracking-tight text-emerald-950">Choose a game</h3>
+                    <p class="text-slate-600 mt-1">Start with the matching game to learn poses, then flow with your breath.</p>
+                </div>
+                <div class="hidden md:block text-xs px-3 py-1 bg-white rounded-2xl border text-slate-500">Tap any card to begin</div>
+            </div>
+
+            <!-- Game Cards -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Pose Match Card -->
+                <div onclick="showGame('pose-match')" class="yoga-card group bg-white border border-slate-200 rounded-3xl p-7 cursor-pointer hover:border-emerald-300">
+                    <div class="flex items-start justify-between">
+                        <div class="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-200 transition-colors">
+                            <i class="fa-solid fa-link text-emerald-700 text-3xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block text-xs font-mono tracking-[2px] px-3 py-px bg-emerald-100 text-emerald-700 rounded">LEARNING</span>
+                        </div>
+                    </div>
+                    <h4 class="text-3xl font-semibold tracking-tight mb-3">Pose Connection</h4>
+                    <p class="text-slate-600 mb-6">Match beautiful yoga pose images with their names and alignment cues. Build your visual vocabulary.</p>
+                    <div class="flex items-center text-sm text-emerald-700 font-medium">
+                        <span>Start matching</span> 
+                        <i class="fa-solid fa-chevron-right ml-2 group-hover:ml-3 transition-all"></i>
+                    </div>
+                </div>
+
+                <!-- Breath Game Card -->
+                <div onclick="showGame('breath-game')" class="yoga-card group bg-white border border-slate-200 rounded-3xl p-7 cursor-pointer hover:border-emerald-300">
+                    <div class="flex items-start justify-between">
+                        <div class="w-14 h-14 bg-sky-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-sky-200 transition-colors">
+                            <i class="fa-solid fa-lungs text-sky-600 text-3xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block text-xs font-mono tracking-[2px] px-3 py-px bg-sky-100 text-sky-700 rounded">BREATH</span>
+                        </div>
+                    </div>
+                    <h4 class="text-3xl font-semibold tracking-tight mb-3">Sun Salutation Breath</h4>
+                    <p class="text-slate-600 mb-6">A guided flowing practice. Watch the breath orb and click to transition poses at the perfect moment.</p>
+                    <div class="flex items-center text-sm text-sky-700 font-medium">
+                        <span>Begin your flow</span> 
+                        <i class="fa-solid fa-chevron-right ml-2 group-hover:ml-3 transition-all"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- POSE MATCH GAME -->
+        <div id="pose-match" class="section bg-white border border-slate-200 rounded-3xl p-8 md:p-10 shadow-sm">
+            <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center gap-x-4">
+                    <button onclick="hideGame()" class="text-emerald-700 hover:text-emerald-900 p-2 -ml-2"><i class="fa-solid fa-arrow-left text-xl"></i></button>
+                    <div>
+                        <h3 class="text-3xl font-semibold tracking-tight">Pose Connection Game</h3>
+                        <p class="text-emerald-700 text-sm">Match the image to the correct name &amp; cue</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-slate-500">Score</div>
+                    <div id="match-score" class="text-4xl font-semibold tabular-nums text-emerald-800">0</div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Images Column -->
+                <div>
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <div class="font-medium text-sm text-slate-600">Yoga Poses</div>
+                        <div class="text-xs text-emerald-600">Click an image, then its match</div>
+                    </div>
+                    <div id="pose-images" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Text Cards Column -->
+                <div>
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <div class="font-medium text-sm text-slate-600">Names &amp; Cues</div>
+                        <div class="text-xs text-emerald-600">Find the matching description</div>
+                    </div>
+                    <div id="pose-texts" class="space-y-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex items-center justify-between text-sm">
+                <button onclick="resetMatchGame()" class="px-5 py-2 text-emerald-700 hover:bg-emerald-50 rounded-2xl flex items-center gap-x-2">
+                    <i class="fa-solid fa-redo"></i> 
+                    <span>Reset Game</span>
+                </button>
+                <div id="match-status" class="font-medium text-emerald-700"></div>
+            </div>
+        </div>
+
+        <!-- SUN SAL BREATH GAME -->
+        <div id="breath-game" class="section bg-white border border-slate-200 rounded-3xl p-8 md:p-10 shadow-sm">
+            <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center gap-x-4">
+                    <button onclick="hideGame()" class="text-sky-700 hover:text-sky-900 p-2 -ml-2"><i class="fa-solid fa-arrow-left text-xl"></i></button>
+                    <div>
+                        <h3 class="text-3xl font-semibold tracking-tight">Sun Salutation Breath Game</h3>
+                        <p class="text-sky-700 text-sm">Let your breath guide the flow • Click to transition</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-slate-500">Accuracy</div>
+                    <div id="breath-accuracy" class="text-4xl font-semibold tabular-nums text-sky-700">--</div>
+                </div>
+            </div>
+
+            <div class="max-w-md mx-auto">
+                <!-- Breath Visual -->
+                <div class="flex justify-center mb-8">
+                    <div id="breath-orb" 
+                         class="breath-orb flex-shrink-0 cursor-pointer"
+                         onclick="handleBreathClick()">
+                        <div class="text-center">
+                            <div id="breath-phase-text" class="text-white text-xl font-semibold tracking-wider">INHALE</div>
+                            <div id="breath-count" class="text-white/90 text-5xl font-light tabular-nums mt-1">4</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current & Next Pose -->
+                <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <div class="text-xs uppercase tracking-widest text-slate-500 mb-px">Current Pose</div>
+                            <div id="current-pose" class="text-2xl font-semibold text-emerald-900">Mountain Pose</div>
+                            <div id="current-pose-sanskrit" class="text-emerald-700">Tadasana</div>
+                        </div>
+                        <i class="fa-solid fa-person text-5xl text-emerald-300"></i>
+                    </div>
+                    
+                    <div class="border-t border-slate-200 pt-4 mt-4">
+                        <div class="text-xs uppercase tracking-widest text-slate-500 mb-1.5">Next Pose</div>
+                        <div id="next-pose" class="font-medium text-lg">Forward Fold <span class="text-slate-400 text-base">(Uttanasana)</span></div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex gap-3">
+                    <button onclick="startBreathGame()" id="start-breath-btn"
+                            class="flex-1 py-3.5 bg-sky-600 hover:bg-sky-700 transition-colors text-white font-semibold rounded-3xl flex items-center justify-center gap-x-2">
+                        <i class="fa-solid fa-play mr-1"></i> 
+                        <span>Start Flow</span>
+                    </button>
+                    <button onclick="resetBreathGame()" 
+                            class="px-6 py-3.5 border border-slate-300 hover:bg-slate-50 transition-colors font-medium rounded-3xl">
+                        Reset
+                    </button>
+                </div>
+
+                <div id="breath-instructions" class="mt-5 text-center text-sm text-slate-500">
+                    Watch the orb expand &amp; contract with your breath.<br>
+                    Click the orb or "Transition" when you feel ready to move to the next pose.
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-12 text-center">
+            <p class="text-xs text-slate-400">More minigames coming soon • Built for EKY Yoga Co. • Embed this on your Wix Play page</p>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind script
+        function initializeTailwind() {
+            document.documentElement.style.setProperty('--accent', '#40916c');
+        }
+
+        let currentGame = null;
+
+        function showGame(gameId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            // Show selected
+            const section = document.getElementById(gameId);
+            if (section) {
+                section.classList.add('active');
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                currentGame = gameId;
+
+                if (gameId === 'pose-match' && !window.matchGameInitialized) {
+                    initMatchGame();
+                }
+                if (gameId === 'breath-game' && !window.breathGameInitialized) {
+                    // ready to start
+                }
+            }
+        }
+
+        function hideGame() {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('games-section').scrollIntoView({ behavior: 'smooth' });
+            currentGame = null;
+        }
+
+        // ========== POSE MATCH GAME ==========
+        let matchScore = 0;
+        let selectedImage = null;
+        let matchedPairs = 0;
+        const totalPairs = 6;
+
+        const poseData = [
+            { id: 1, name: "Mountain Pose", sanskrit: "Tadasana", cue: "Ground through all four corners of the feet, lift through the crown" },
+            { id: 2, name: "Forward Fold", sanskrit: "Uttanasana", cue: "Hinge from the hips, lengthen the spine on inhale" },
+            { id: 3, name: "Downward Dog", sanskrit: "Adho Mukha Svanasana", cue: "Press evenly through hands &amp; feet, lift sitting bones high" },
+            { id: 4, name: "Plank Pose", sanskrit: "Phalakasana", cue: "Strong core, shoulders stacked over wrists, straight line" },
+            { id: 5, name: "Upward Dog", sanskrit: "Urdhva Mukha Svanasana", cue: "Press tops of feet down, lift chest, shoulders away from ears" },
+            { id: 6, name: "Child's Pose", sanskrit: "Balasana", cue: "Big toes together, knees wide, rest forehead on mat" }
+        ];
+
+        function initMatchGame() {
+            window.matchGameInitialized = true;
+            matchScore = 0;
+            matchedPairs = 0;
+            selectedImage = null;
+            updateMatchScore();
+
+            const imagesContainer = document.getElementById('pose-images');
+            const textsContainer = document.getElementById('pose-texts');
+            imagesContainer.innerHTML = '';
+            textsContainer.innerHTML = '';
+
+            // Shuffle for replayability
+            const shuffledPoses = [...poseData].sort(() => Math.random() - 0.5);
+
+            // Create image cards (using emoji placeholders for now - replace with real images later)
+            shuffledPoses.forEach(pose => {
+                const card = document.createElement('div');
+                card.className = `match-card bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-col items-center text-center yoga-card`;
+                card.innerHTML = `
+                    <div class="w-full aspect-square bg-emerald-50 rounded-xl mb-3 flex items-center justify-center text-6xl">
+                        <i class="fa-solid fa-person text-emerald-300"></i>
+                    </div>
+                    <div class="text-xs text-emerald-600 font-mono tracking-wider">${pose.sanskrit}</div>
+                `;
+                card.dataset.id = pose.id;
+                card.onclick = () => selectImageCard(card, pose.id);
+                imagesContainer.appendChild(card);
+            });
+
+            // Create text cards
+            const shuffledTexts = [...poseData].sort(() => Math.random() - 0.5);
+            shuffledTexts.forEach(pose => {
+                const textCard = document.createElement('div');
+                textCard.className = `match-card border border-slate-200 bg-white rounded-2xl p-4 hover:border-emerald-300 transition-colors`;
+                textCard.innerHTML = `
+                    <div class="font-semibold text-lg">${pose.name}</div>
+                    <div class="text-emerald-700 text-sm mt-0.5">${pose.sanskrit}</div>
+                    <div class="text-xs text-slate-500 mt-2 leading-snug">${pose.cue}</div>
+                `;
+                textCard.dataset.id = pose.id;
+                textCard.onclick = () => selectTextCard(textCard, pose.id);
+                textsContainer.appendChild(textCard);
+            });
+
+            document.getElementById('match-status').textContent = 'Match all 6 poses to complete';
+        }
+
+        function selectImageCard(card, id) {
+            // Deselect previous
+            document.querySelectorAll('#pose-images .match-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedImage = { card, id };
+            checkForMatch();
+        }
+
+        function selectTextCard(card, id) {
+            if (!selectedImage) {
+                // flash hint
+                card.style.transition = 'none';
+                card.style.borderColor = '#f59e0b';
+                setTimeout(() => {
+                    card.style.borderColor = '';
+                    card.style.transition = '';
+                }, 600);
+                return;
+            }
+            checkForMatch(card, id);
+        }
+
+        function checkForMatch(textCard = null, textId = null) {
+            if (!selectedImage) return;
+
+            const imageId = selectedImage.id;
+            const matchId = textId || (textCard ? parseInt(textCard.dataset.id) : null);
+
+            if (!matchId) return;
+
+            if (imageId === matchId) {
+                // Correct match!
+                selectedImage.card.classList.add('matched', 'border-emerald-500');
+                selectedImage.card.style.borderColor = '#10b981';
+                if (textCard) {
+                    textCard.classList.add('matched', 'border-emerald-500');
+                    textCard.style.borderColor = '#10b981';
+                }
+
+                matchScore += 10;
+                matchedPairs++;
+                updateMatchScore();
+
+                selectedImage = null;
+
+                if (matchedPairs === totalPairs) {
+                    document.getElementById('match-status').innerHTML = `<span class="text-emerald-600 font-semibold">Beautiful! All poses matched. Score: ${matchScore}</span>`;
+                    confetti();
+                } else {
+                    document.getElementById('match-status').textContent = `${matchedPairs}/${totalPairs} matched`;
+                }
+            } else {
+                // Wrong match
+                if (textCard) {
+                    textCard.style.borderColor = '#ef4444';
+                    setTimeout(() => {
+                        if (textCard) textCard.style.borderColor = '';
+                    }, 800);
+                }
+                selectedImage.card.classList.remove('selected');
+                selectedImage = null;
+                document.getElementById('match-status').textContent = 'Try again — that one doesn\'t match';
+                setTimeout(() => {
+                    document.getElementById('match-status').textContent = `${matchedPairs}/${totalPairs} matched`;
+                }, 1400);
+            }
+        }
+
+        function updateMatchScore() {
+            document.getElementById('match-score').textContent = matchScore;
+        }
+
+        function resetMatchGame() {
+            window.matchGameInitialized = false;
+            initMatchGame();
+        }
+
+        // Simple confetti for win
+        function confetti() {
+            const colors = ['#10b981', '#34d399', '#6ee7b7'];
+            for (let i = 0; i < 80; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.style.position = 'fixed';
+                    particle.style.left = Math.random() * window.innerWidth + 'px';
+                    particle.style.top = '-20px';
+                    particle.style.width = '8px';
+                    particle.style.height = '8px';
+                    particle.style.borderRadius = '50%';
+                    particle.style.background = colors[Math.floor(Math.random()*colors.length)];
+                    particle.style.zIndex = '9999';
+                    particle.style.pointerEvents = 'none';
+                    document.body.appendChild(particle);
+
+                    const duration = Math.random() * 3000 + 2500;
+                    const angle = Math.random() * 60 - 30;
+                    
+                    particle.animate([
+                        { transform: `translateY(0) rotate(0deg)`, opacity: 1 },
+                        { transform: `translateY(${window.innerHeight + 100}px) rotate(${angle * 3}deg)`, opacity: 0 }
+                    ], {
+                        duration: duration,
+                        easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)'
+                    }).onfinish = () => particle.remove();
+                }, i * 3);
+            }
+        }
+
+        // ========== SUN SAL BREATH GAME ==========
+        let breathInterval = null;
+        let currentPhase = 0; // 0=inhale, 1=exhale
+        let breathCount = 4;
+        let currentPoseIndex = 0;
+        let correctTransitions = 0;
+        let totalAttempts = 0;
+        let gameRunning = false;
+
+        const sunSalPoses = [
+            { name: "Mountain Pose", sanskrit: "Tadasana", breath: "inhale" },
+            { name: "Forward Fold", sanskrit: "Uttanasana", breath: "exhale" },
+            { name: "Halfway Lift", sanskrit: "Ardha Uttanasana", breath: "inhale" },
+            { name: "Plank Pose", sanskrit: "Phalakasana", breath: "exhale" },
+            { name: "Upward-Facing Dog", sanskrit: "Urdhva Mukha Svanasana", breath: "inhale" },
+            { name: "Downward-Facing Dog", sanskrit: "Adho Mukha Svanasana", breath: "exhale" },
+            { name: "Forward Fold", sanskrit: "Uttanasana", breath: "inhale" },
+            { name: "Mountain Pose", sanskrit: "Tadasana", breath: "exhale" }
+        ];
+
+        function updateBreathDisplay() {
+            const orb = document.getElementById('breath-orb');
+            const phaseText = document.getElementById('breath-phase-text');
+            const countEl = document.getElementById('breath-count');
+
+            if (!orb || !phaseText || !countEl) return;
+
+            const pose = sunSalPoses[currentPoseIndex];
+            
+            if (currentPhase === 0) { // Inhale
+                orb.classList.remove('exhale');
+                orb.classList.add('inhale');
+                phaseText.textContent = 'INHALE';
+                phaseText.style.color = '#bae6fd';
+            } else {
+                orb.classList.remove('inhale');
+                orb.classList.add('exhale');
+                phaseText.textContent = 'EXHALE';
+                phaseText.style.color = '#7dd3fc';
+            }
+
+            countEl.textContent = breathCount;
+
+            // Update pose display
+            document.getElementById('current-pose').textContent = pose.name;
+            document.getElementById('current-pose-sanskrit').textContent = pose.sanskrit;
+
+            // Next pose preview
+            const nextIndex = (currentPoseIndex + 1) % sunSalPoses.length;
+            const nextPose = sunSalPoses[nextIndex];
+            document.getElementById('next-pose').innerHTML = `${nextPose.name} <span class="text-slate-400 text-base">(${nextPose.sanskrit})</span>`;
+        }
+
+        function startBreathGame() {
+            if (gameRunning) return;
+            gameRunning = true;
+            correctTransitions = 0;
+            totalAttempts = 0;
+            currentPoseIndex = 0;
+            currentPhase = 0;
+            breathCount = 4;
+
+            document.getElementById('start-breath-btn').innerHTML = `<i class="fa-solid fa-pause mr-2"></i> <span>Pause</span>`;
+            document.getElementById('start-breath-btn').onclick = pauseBreathGame;
+            document.getElementById('breath-instructions').innerHTML = 'Click the breathing orb when you are ready to transition to the next pose.';
+            document.getElementById('breath-accuracy').textContent = '--';
+
+            updateBreathDisplay();
+
+            // Start the breath cycle timer
+            if (breathInterval) clearInterval(breathInterval);
+            breathInterval = setInterval(() => {
+                breathCount--;
+                if (breathCount <= 0) {
+                    // Auto switch phase
+                    currentPhase = currentPhase === 0 ? 1 : 0;
+                    breathCount = 4;
+                    updateBreathDisplay();
+                } else {
+                    const countEl = document.getElementById('breath-count');
+                    if (countEl) countEl.textContent = breathCount;
+                }
+            }, 1000);
+        }
+
+        function pauseBreathGame() {
+            gameRunning = false;
+            if (breathInterval) {
+                clearInterval(breathInterval);
+                breathInterval = null;
+            }
+            document.getElementById('start-breath-btn').innerHTML = `<i class="fa-solid fa-play mr-1"></i> <span>Resume</span>`;
+            document.getElementById('start-breath-btn').onclick = startBreathGame;
+        }
+
+        function handleBreathClick() {
+            if (!gameRunning) {
+                startBreathGame();
+                return;
+            }
+
+            const currentPose = sunSalPoses[currentPoseIndex];
+            const expectedPhase = currentPose.breath === 'inhale' ? 0 : 1;
+
+            totalAttempts++;
+
+            if (currentPhase === expectedPhase) {
+                // Good timing!
+                correctTransitions++;
+                // Advance to next pose
+                currentPoseIndex = (currentPoseIndex + 1) % sunSalPoses.length;
+                currentPhase = sunSalPoses[currentPoseIndex].breath === 'inhale' ? 0 : 1;
+                breathCount = 4;
+
+                // Visual feedback
+                const orb = document.getElementById('breath-orb');
+                orb.style.boxShadow = '0 0 80px rgba(16, 185, 129, 0.7)';
+                setTimeout(() => {
+                    if (orb) orb.style.boxShadow = '0 0 60px rgba(64, 145, 108, 0.5), inset 40px 40px 60px rgba(255,255,255,0.25), inset -30px -30px 50px rgba(0,0,0,0.3)';
+                }, 600);
+
+                updateBreathDisplay();
+            } else {
+                // Off timing - gentle feedback
+                const orb = document.getElementById('breath-orb');
+                orb.style.boxShadow = '0 0 40px rgba(239, 68, 68, 0.5)';
+                setTimeout(() => {
+                    if (orb) orb.style.boxShadow = '0 0 60px rgba(64, 145, 108, 0.5), inset 40px 40px 60px rgba(255,255,255,0.25), inset -30px -30px 50px rgba(0,0,0,0.3)';
+                }, 500);
+            }
+
+            // Update accuracy
+            const accuracy = totalAttempts > 0 ? Math.round((correctTransitions / totalAttempts) * 100) : 0;
+            document.getElementById('breath-accuracy').textContent = accuracy + '%';
+        }
+
+        function resetBreathGame() {
+            if (breathInterval) clearInterval(breathInterval);
+            breathInterval = null;
+            gameRunning = false;
+            currentPoseIndex = 0;
+            currentPhase = 0;
+            breathCount = 4;
+            correctTransitions = 0;
+            totalAttempts = 0;
+
+            document.getElementById('start-breath-btn').innerHTML = `<i class="fa-solid fa-play mr-1"></i> <span>Start Flow</span>`;
+            document.getElementById('start-breath-btn').onclick = startBreathGame;
+            document.getElementById('breath-accuracy').textContent = '--';
+            document.getElementById('breath-instructions').innerHTML = 'Watch the orb expand &amp; contract with your breath.<br>Click the orb or "Transition" when you feel ready to move to the next pose.';
+
+            updateBreathDisplay();
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', function(e) {
+            if (currentGame === 'breath-game' && (e.key === ' ' || e.key === 'Enter')) {
+                e.preventDefault();
+                handleBreathClick();
+            }
+            if (e.key === 'Escape' && currentGame) {
+                hideGame();
+            }
+        });
+
+        // Boot
+        function boot() {
+            initializeTailwind();
+            // Optional: auto show instructions or nothing
+            console.log('%c[EKY Yoga Games] Starter loaded. Ready for Claude Code iteration!', 'color:#166534');
+        }
+
+        window.onload = boot;
+    </script>
+</body>
+</html>
