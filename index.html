@@ -178,12 +178,14 @@
       <button class="level-tab" data-level="energy" onclick="switchLevel('energy')">
         <span style="opacity:.7;font-weight:600;">Level 2</span> · Energy Lines
       </button>
+      <div style="flex:1"></div>
+      <div id="deck-progress" style="align-self:center;font-size:.75rem;color:#9A9590;">0 / 62 poses seen</div>
     </div>
 
     <!-- ─── LEVEL 1: Pose Connection ─── -->
     <div id="level-pose">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
-      <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Yoga Poses</div><div id="pose-images" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;"></div></div>
+      <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Yoga Poses</div><div id="pose-images" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;"></div></div>
       <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Names &amp; Cues</div><div id="pose-texts" style="display:flex;flex-direction:column;gap:.6rem;"></div></div>
     </div>
     <div style="margin-top:1.5rem;display:flex;align-items:center;justify-content:space-between;">
@@ -437,8 +439,107 @@ var poseLibrary = [
 ];
 function findPose(name){ for(var i=0;i<poseLibrary.length;i++){ if(poseLibrary[i].name===name) return poseLibrary[i]; } return null; }
 
+/* ════════════ POSE ART — vector diagram per pose ════════════ */
+/* Each pose id maps to a stick-figure silhouette: 11 joints in a 0..100 x / 0..125 y box.
+   Order: [head, shoulder, hip, elbowL, handL, elbowR, handR, kneeL, footL, kneeR, footR] */
+var POSE_ART = {
+ 1:[[50,15],[50,30],[50,66],[44,46],[43,62],[56,46],[57,62],[46,90],[46,117],[54,90],[54,117]],
+ 2:[[60,92],[54,78],[46,56],[56,84],[58,108],[58,86],[62,110],[44,84],[44,116],[50,84],[50,116]],
+ 3:[[76,58],[64,60],[40,60],[62,72],[60,84],[66,70],[64,82],[42,88],[42,117],[50,88],[50,117]],
+ 4:[[46,20],[48,34],[42,64],[44,20],[42,8],[54,22],[58,10],[52,88],[46,116],[60,88],[54,116]],
+ 5:[[50,16],[50,30],[50,64],[46,16],[44,4],[56,16],[58,4],[34,92],[24,116],[66,86],[70,116]],
+ 6:[[50,16],[50,32],[50,64],[34,32],[20,32],[66,32],[80,32],[34,92],[24,116],[66,88],[72,116]],
+ 7:[[46,18],[48,32],[50,64],[40,20],[34,8],[58,44],[40,70],[34,92],[24,116],[66,88],[72,116]],
+ 8:[[64,40],[58,46],[48,62],[58,32],[72,20],[66,56],[70,66],[32,90],[20,116],[68,86],[74,116]],
+ 9:[[34,42],[40,48],[50,58],[44,34],[48,22],[34,56],[28,66],[68,86],[76,116],[30,86],[24,116]],
+ 10:[[66,84],[60,70],[50,58],[60,86],[60,104],[66,86],[68,104],[36,90],[26,116],[66,86],[72,114]],
+ 11:[[50,100],[50,82],[50,62],[46,92],[44,112],[54,92],[56,112],[34,86],[26,116],[66,86],[74,116]],
+ 12:[[50,16],[50,32],[50,60],[36,30],[34,16],[64,30],[66,16],[32,86],[28,116],[68,86],[72,116]],
+ 13:[[58,34],[52,42],[48,58],[48,30],[64,24],[60,52],[74,64],[44,84],[42,104],[68,70],[86,76]],
+ 14:[[50,15],[50,30],[50,64],[46,20],[49,8],[54,20],[51,8],[48,90],[48,117],[66,78],[52,72]],
+ 15:[[50,18],[50,34],[50,62],[48,40],[51,24],[52,40],[49,24],[50,84],[50,110],[52,86],[44,98]],
+ 16:[[42,30],[46,40],[50,58],[36,36],[26,30],[54,46],[64,38],[58,52],[70,34],[52,86],[54,114]],
+ 17:[[22,54],[34,56],[52,60],[24,56],[12,58],[26,52],[14,52],[70,58],[86,58],[54,86],[56,116]],
+ 18:[[30,46],[38,50],[52,56],[40,36],[42,20],[34,66],[30,84],[70,54],[86,52],[52,84],[52,114]],
+ 19:[[50,16],[50,32],[50,62],[44,46],[46,60],[60,48],[78,54],[66,66],[82,56],[48,88],[48,116]],
+ 20:[[50,28],[50,42],[50,72],[40,58],[34,76],[60,58],[66,76],[34,80],[58,86],[66,80],[42,86]],
+ 21:[[42,30],[44,44],[46,72],[42,58],[42,74],[50,60],[52,74],[64,74],[84,74],[64,78],[84,78]],
+ 22:[[64,64],[56,58],[46,70],[64,64],[82,72],[66,66],[84,74],[66,74],[86,74],[66,78],[86,78]],
+ 23:[[64,62],[56,56],[46,70],[62,62],[82,74],[64,64],[84,76],[58,84],[44,80],[66,76],[86,78]],
+ 24:[[50,30],[50,44],[50,72],[42,62],[48,86],[58,62],[52,86],[34,82],[50,88],[66,82],[50,88]],
+ 25:[[50,72],[50,58],[50,72],[46,64],[44,86],[54,64],[56,86],[32,82],[24,96],[68,82],[76,96]],
+ 26:[[50,28],[50,42],[50,70],[40,56],[50,50],[58,30],[52,44],[46,80],[64,84],[54,80],[36,84]],
+ 27:[[50,28],[50,42],[50,70],[42,56],[44,72],[58,56],[56,72],[42,82],[40,98],[58,82],[60,98]],
+ 28:[[36,40],[42,48],[52,66],[44,54],[58,52],[46,56],[60,54],[64,52],[80,38],[66,54],[82,40]],
+ 29:[[54,30],[50,44],[48,70],[56,54],[60,72],[40,58],[36,74],[40,80],[60,86],[58,78],[54,92]],
+ 30:[[26,72],[36,68],[58,72],[28,70],[14,72],[30,74],[16,76],[60,80],[72,88],[60,84],[72,90]],
+ 31:[[24,52],[34,58],[60,74],[34,70],[36,80],[36,68],[38,80],[74,76],[90,78],[74,80],[90,82]],
+ 32:[[22,46],[32,54],[56,72],[30,68],[32,86],[32,66],[34,86],[72,82],[90,88],[72,86],[90,92]],
+ 33:[[26,56],[36,60],[62,74],[40,72],[24,78],[42,74],[26,80],[76,76],[92,78],[76,80],[92,82]],
+ 34:[[20,78],[28,76],[52,58],[24,80],[16,82],[26,82],[18,84],[66,56],[78,80],[66,60],[78,84]],
+ 35:[[24,72],[30,64],[50,40],[26,76],[22,86],[28,74],[24,84],[64,56],[78,82],[66,58],[80,84]],
+ 36:[[30,52],[40,58],[58,66],[44,60],[60,54],[46,62],[62,56],[72,72],[64,52],[74,74],[66,54]],
+ 37:[[60,38],[52,40],[48,58],[52,50],[46,74],[56,52],[58,74],[44,80],[44,98],[56,80],[56,98]],
+ 38:[[26,58],[36,62],[60,70],[44,66],[30,66],[46,68],[32,70],[74,66],[88,58],[74,70],[88,62]],
+ 39:[[18,70],[30,66],[56,72],[34,76],[24,80],[36,78],[26,82],[72,74],[90,76],[72,78],[90,80]],
+ 40:[[50,18],[50,32],[50,62],[46,18],[44,6],[56,18],[58,6],[34,90],[24,104],[66,84],[70,114]],
+ 41:[[50,18],[50,32],[50,62],[46,18],[44,6],[56,18],[58,6],[36,94],[26,112],[66,86],[70,116]],
+ 42:[[40,66],[48,66],[58,68],[44,76],[34,86],[46,78],[36,88],[36,86],[22,110],[64,84],[66,112]],
+ 43:[[34,52],[42,54],[54,64],[40,64],[32,76],[46,66],[38,78],[70,80],[88,84],[40,80],[24,76]],
+ 44:[[50,30],[50,44],[50,64],[38,52],[48,46],[62,52],[52,46],[34,72],[36,96],[66,72],[64,96]],
+ 45:[[34,64],[44,66],[60,70],[40,74],[28,80],[42,76],[30,82],[64,82],[78,80],[64,86],[78,88]],
+ 46:[[22,72],[32,70],[54,68],[44,58],[56,42],[46,62],[64,44],[60,52],[58,40],[64,56],[66,42]],
+ 47:[[58,40],[52,46],[48,60],[46,56],[42,72],[58,34],[64,22],[64,88],[74,116],[44,86],[40,116]],
+ 48:[[44,26],[48,38],[44,62],[40,46],[52,42],[58,44],[54,40],[54,84],[48,114],[60,86],[54,114]],
+ 49:[[20,58],[30,58],[50,60],[30,46],[18,40],[30,70],[18,78],[64,52],[76,48],[66,56],[78,52]],
+ 50:[[26,76],[36,70],[60,68],[40,74],[20,78],[44,60],[40,48],[60,78],[72,84],[62,82],[74,88]],
+ 51:[[24,54],[34,56],[58,62],[34,68],[34,80],[36,68],[36,80],[74,68],[90,74],[74,70],[90,76]],
+ 52:[[24,56],[34,58],[58,64],[38,72],[24,78],[40,72],[26,78],[74,70],[90,76],[74,72],[90,78]],
+ 53:[[24,50],[34,54],[56,66],[36,42],[38,28],[34,68],[32,82],[72,76],[88,84],[72,80],[88,88]],
+ 54:[[34,66],[40,60],[58,38],[36,72],[26,80],[38,70],[28,78],[68,58],[80,80],[70,60],[82,82]],
+ 55:[[40,50],[44,56],[58,52],[42,64],[40,78],[46,64],[44,78],[56,62],[68,50],[58,66],[70,54]],
+ 56:[[30,66],[40,60],[64,60],[36,68],[34,84],[38,70],[36,86],[66,72],[78,84],[68,74],[80,86]],
+ 57:[[34,64],[40,58],[58,34],[36,70],[26,82],[38,68],[28,80],[70,56],[82,82],[72,58],[84,84]],
+ 58:[[24,74],[34,72],[54,70],[30,76],[22,80],[32,78],[24,82],[56,52],[58,32],[60,54],[62,34]],
+ 59:[[50,108],[50,92],[50,60],[40,86],[44,72],[60,86],[56,72],[48,40],[48,20],[52,40],[52,20]],
+ 60:[[60,100],[54,90],[46,64],[58,94],[70,92],[60,96],[72,94],[40,46],[28,40],[42,48],[30,42]],
+ 61:[[22,68],[32,66],[56,64],[28,72],[20,76],[30,74],[22,78],[64,52],[72,64],[66,72],[72,64]],
+ 62:[[20,60],[32,60],[58,60],[40,66],[28,70],[42,66],[30,72],[74,58],[90,54],[74,64],[90,68]]
+};
+function poseSvg(id, color){
+  var P = POSE_ART[id]; color = color || '#3D3A38';
+  if(!P) return '<svg viewBox="0 0 100 125" style="width:100%;height:100%"><circle cx="50" cy="40" r="9" fill="'+color+'"/></svg>';
+  var h=P[0],s=P[1],p=P[2],eL=P[3],wL=P[4],eR=P[5],wR=P[6],kL=P[7],fL=P[8],kR=P[9],fR=P[10];
+  function pl(){ var a=[].slice.call(arguments); return '<polyline points="'+a.map(function(q){return q[0]+','+q[1];}).join(' ')+'"/>'; }
+  return '<svg viewBox="0 0 100 125" style="width:100%;height:100%">'+
+    '<g stroke="'+color+'" stroke-width="6.5" fill="none" stroke-linecap="round" stroke-linejoin="round">'+
+    pl(p,s)+pl(s,eL,wL)+pl(s,eR,wR)+pl(p,kL,fL)+pl(p,kR,fR)+
+    '<line x1="'+s[0]+'" y1="'+s[1]+'" x2="'+h[0]+'" y2="'+h[1]+'"/></g>'+
+    '<circle cx="'+h[0]+'" cy="'+h[1]+'" r="7.5" fill="'+color+'"/></svg>';
+}
+
+/* ════════════ DECK CYCLING — draw through all 62 poses, no repeats per pass ════════════ */
+var DECKS={}, seenPoses={};
+function nextFromDeck(name, n){
+  var allIds=poseLibrary.map(function(p){return p.id;});
+  var d=DECKS[name];
+  if(!d){ d=DECKS[name]={order:allIds.slice().sort(function(){return Math.random()-0.5;}),pos:0}; }
+  if(d.pos+n>d.order.length){
+    var fresh=allIds.slice().sort(function(){return Math.random()-0.5;});
+    d.order=d.order.slice(d.pos).concat(fresh); d.pos=0;
+  }
+  var ids=d.order.slice(d.pos,d.pos+n); d.pos+=n;
+  return ids.map(function(id){ for(var i=0;i<poseLibrary.length;i++){ if(poseLibrary[i].id===id) return poseLibrary[i]; } });
+}
+function markSeen(poses){ poses.forEach(function(p){ seenPoses[p.id]=true; }); updateDeckProgress(); }
+function updateDeckProgress(){
+  var el=document.getElementById('deck-progress'); if(!el) return;
+  var n=Object.keys(seenPoses).length;
+  el.textContent=n+' / '+poseLibrary.length+' poses seen'+(n>=poseLibrary.length?' ✓':'');
+}
+
 /* ════════════ POSE MATCH (click + drag & drop) ════════════ */
-var matchScore=0, selectedImage=null, matchedPairs=0, matchTotal=6, matchSet=[];
+var matchScore=0, selectedImage=null, matchedPairs=0, matchTotal=8, matchSet=[];
 
 function initMatchGame() {
   window.matchGameInitialized = true;
@@ -448,13 +549,14 @@ function initMatchGame() {
   if(!imgC||!txtC) return;
   imgC.innerHTML=''; txtC.innerHTML='';
 
-  matchSet = poseLibrary.slice().sort(function(){return Math.random()-0.5;}).slice(0, matchTotal);
+  matchSet = nextFromDeck('match', matchTotal);
+  markSeen(matchSet);
 
   matchSet.slice().sort(function(){return Math.random()-0.5;}).forEach(function(pose){
     var card=document.createElement('div');
     card.className='match-card'; card.draggable=true;
-    card.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:14px;padding:14px;display:flex;flex-direction:column;align-items:center;text-align:center;';
-    card.innerHTML='<div style="width:100%;aspect-ratio:1;background:#faf0e6;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-person" style="font-size:2.4rem;color:#c4a876"></i></div><div style="font-size:10px;color:#a68563;font-family:monospace;letter-spacing:.06em">'+pose.sanskrit+'</div>';
+    card.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:14px;padding:10px;display:flex;flex-direction:column;align-items:center;text-align:center;';
+    card.innerHTML='<div style="width:100%;aspect-ratio:1;background:#faf0e6;border-radius:10px;margin-bottom:8px;padding:8px;display:flex;align-items:center;justify-content:center">'+poseSvg(pose.id,'#8a6f47')+'</div><div style="font-size:10px;color:#a68563;font-family:monospace;letter-spacing:.04em">'+pose.sanskrit+'</div>';
     card.dataset.id=pose.id;
     card.onclick=function(){ selectImageCard(card, pose.id); };
     card.addEventListener('dragstart', function(e){ selectImageCard(card,pose.id); card.classList.add('dragging'); if(e.dataTransfer){e.dataTransfer.setData('text/plain', String(pose.id)); e.dataTransfer.effectAllowed='move';} });
@@ -561,8 +663,9 @@ function drawFig(j){
 }
 function buildClockLabels(){
   var w=document.getElementById('clock-labels'); if(!w||w.dataset.built) return;
-  for(var i=0;i<N_P-1;i++){
-    var xy=polar(280,280,240,(i+1)*30), el=document.createElement('div');
+  /* 12 labels at the 12 clock points: pose 1 at 12 o'clock (0°), pose 12 at 11 o'clock (330°) */
+  for(var i=0;i<N_P;i++){
+    var xy=polar(280,280,242,i*30), el=document.createElement('div');
     el.className='clock-label'; el.dataset.index=i;
     el.style.left=(xy[0]/560*100)+'%'; el.style.top=(xy[1]/560*100)+'%';
     el.innerHTML='<div class="lbl-num">'+(i+1)+'</div><div class="lbl-name">'+sunSalPoses[i].en+'</div>';
@@ -655,13 +758,14 @@ document.addEventListener('keyup',function(e){
 })();
 
 /* ════════════ ENERGY LINES ════════════ */
-var enPairs=5, enSelPose=null, enLinked=0, enConnections=[];
-var enColors=['#C8472A','#E8A07A','#2B6B5E','#7580BE','#F5E535'];
+var enPairs=6, enSelPose=null, enLinked=0, enConnections=[];
+var enColors=['#C8472A','#E8A07A','#2B6B5E','#7580BE','#F5E535','#C8472A'];
 
 window.addEventListener('resize', redrawEnergyLines);
 function buildEnergyRound(){
   enSelPose=null; enLinked=0; enConnections=[];
-  var set = poseLibrary.slice().sort(function(){return Math.random()-0.5;}).slice(0, enPairs);
+  var set = nextFromDeck('energy', enPairs);
+  markSeen(set);
   var posesC=document.getElementById('energy-poses'), conceptsC=document.getElementById('energy-concepts');
   var svg=document.getElementById('energy-svg');
   if(!posesC||!conceptsC||!svg) return;
@@ -672,8 +776,8 @@ function buildEnergyRound(){
   set.forEach(function(pose){
     var c=document.createElement('div');
     c.className='energy-card'; c.dataset.id=pose.id;
-    c.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:12px;padding:.85rem 1rem;display:flex;align-items:center;gap:.75rem;';
-    c.innerHTML='<div style="width:2.2rem;height:2.2rem;flex-shrink:0;background:#faf0e6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#c4a876"><i class="fa-solid fa-person"></i></div><div><div style="font-weight:600;font-size:.92rem;color:#3D3A38">'+pose.name+'</div><div style="font-size:.72rem;color:#a68563;font-family:monospace">'+pose.sanskrit+'</div></div>';
+    c.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:12px;padding:.7rem 1rem;display:flex;align-items:center;gap:.75rem;';
+    c.innerHTML='<div style="width:2.6rem;height:2.6rem;flex-shrink:0;background:#faf0e6;border-radius:8px;padding:4px;display:flex;align-items:center;justify-content:center">'+poseSvg(pose.id,'#8a6f47')+'</div><div><div style="font-weight:600;font-size:.92rem;color:#3D3A38">'+pose.name+'</div><div style="font-size:.72rem;color:#a68563;font-family:monospace">'+pose.sanskrit+'</div></div>';
     c.onclick=function(){ selectEnergyPose(c, pose.id); };
     posesC.appendChild(c);
   });
@@ -809,8 +913,10 @@ function selectIssue(id){
 }
 function recRow(type, name, label, desc, color){
   var safeName=name.replace(/'/g,"\\'");
+  var pose = type==='asana' ? findPose(name) : null;
+  var art = pose ? '<div style="width:2.4rem;height:2.4rem;flex-shrink:0;background:#faf0e6;border-radius:8px;padding:3px;display:flex;align-items:center;justify-content:center">'+poseSvg(pose.id,'#8a6f47')+'</div>' : '';
   return '<div style="background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:.8rem .9rem;display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;">'+
-    '<div><div style="font-weight:600;font-size:.9rem;color:#3D3A38">'+label+'</div>'+(desc?'<div style="font-size:.78rem;color:#9d7f68;margin-top:.25rem;line-height:1.45">'+desc+'</div>':'')+'</div>'+
+    '<div style="display:flex;gap:.7rem;align-items:flex-start;">'+art+'<div><div style="font-weight:600;font-size:.9rem;color:#3D3A38">'+label+'</div>'+(desc?'<div style="font-size:.78rem;color:#9d7f68;margin-top:.25rem;line-height:1.45">'+desc+'</div>':'')+'</div></div>'+
     '<button class="rec-add" onclick="addToSequence(\''+type+'\',\''+safeName+'\')" style="flex-shrink:0;background:'+color+'18;color:'+color+';border:none;border-radius:7px;padding:.4rem .6rem;font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-plus" style="margin-right:3px"></i>Add</button>'+
   '</div>';
 }
