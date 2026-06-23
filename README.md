@@ -7,7 +7,7 @@ Interactive browser-based yoga learning and wellness games for **EKY Yoga Co. LL
 ## Games
 
 ### 1. Pose Connection (Matching)
-Enhanced matching with click, drag & drop, and memory flip modes. Match pose images to Sanskrit, cues, breath, and benefits.
+Match pose images to their names, Sanskrit, and alignment cues — by clicking two cards or dragging one onto the other.
 
 ### 2. Sun Salutation Breath
 Guided breath-timed flow through the full sequence with animated figure and clock progress. Hold arrows or drag to inhale/exhale.
@@ -24,12 +24,12 @@ Gamified resolver: Select an issue (anxiety, joint pain, respiratory, low energy
 - Calming, joyful, community-focused UI.
 
 ## Tech Stack
-Vanilla HTML/CSS/JS + Tailwind CDN. Self-contained for Wix iframe embed or Vercel standalone.
+Single self-contained `index.html` — vanilla HTML/CSS/JS, no build step. Fonts and Font Awesome via CDN. Logos served from `./uploads/`. Ready for Wix iframe embed or Vercel standalone.
 
 ## Development
-- Expanded pose library (14+ poses with rich metadata).
-- LocalStorage for progress.
-- Responsive, accessible, mobile-friendly.
+- Pose library of 12 poses with rich metadata (Sanskrit, cue, breath, energy/gift, category).
+- LocalStorage stores the Wellness Guide sequence and session log.
+- Responsive, mobile-friendly layout.
 
 Deployed via Vercel. Embed URL for Wix Play page.
 
