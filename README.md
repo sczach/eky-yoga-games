@@ -6,17 +6,16 @@ Interactive browser-based yoga learning and wellness games for **EKY Yoga Co. LL
 
 ## Games
 
-### 1. Pose Connection (Matching)
-Match pose images to their names, Sanskrit, and alignment cues — by clicking two cards or dragging one onto the other.
+### 1. Pose Matching (two levels)
+A single matching game with two levels you switch between with tabs:
+- **Level 1 · Pose Connection** — match pose images to their names, Sanskrit, and alignment cues by clicking two cards or dragging one onto the other.
+- **Level 2 · Energy Lines** — click a pose, then the gift it brings the body; an animated SVG "energy rope" draws between them. Completing Level 1 offers a shortcut into Level 2.
 
 ### 2. Sun Salutation Breath
-Guided breath-timed flow through the full sequence with animated figure and clock progress. Hold arrows or drag to inhale/exhale.
+Guided breath-timed flow through the full 12-pose sequence with an animated figure and clock progress. Hold arrows or drag to inhale/exhale.
 
-### 3. Energy Lines (New)
-Connect pose visuals with concepts using animated 'energy ropes'. Puzzle-style matching with satisfying line-drawing and completion.
-
-### 4. Wellness Guide (New)
-Gamified resolver: Select an issue (anxiety, joint pain, respiratory, low energy, etc.) → Receive tailored asana + pranayama recommendations. Build your personal sequence and log sessions.
+### 3. Wellness Guide
+Gamified resolver: select how you feel (anxious, low energy, stiff, short of breath, restless, scattered) → receive tailored asana + pranayama recommendations → build a personal sequence → log sessions (persisted in localStorage).
 
 ## Branding & Design
 - Official logos (centered rainbow, icon, color variations) integrated.

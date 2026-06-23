@@ -56,6 +56,13 @@
   #figure-svg { overflow: visible; }
   #figure-svg .breath-ring { transition: r .15s linear, opacity .3s ease; }
 
+  /* Level switcher */
+  .level-tab { font-family:'Inter',sans-serif; font-size:.82rem; color:#5A5653; background:#fff;
+    border:1.5px solid #e8dcc8; border-radius:9px; padding:.55rem 1.1rem; cursor:pointer;
+    transition: border-color .2s ease, color .2s ease, background .2s ease; }
+  .level-tab:hover { border-color:#c4a876; }
+  .level-tab.active { border-color:#2B6B5E; color:#2B6B5E; background:#f3faf8; font-weight:500; }
+
   /* Energy Lines */
   .energy-card { cursor: pointer; user-select: none; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
   .energy-card:hover { border-color: #c4a876; }
@@ -90,15 +97,15 @@
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem;margin-bottom:3.5rem;">
 
-        <!-- Pose Connection -->
-        <div class="eky-game-card" onclick="showGame('pose-match')" style="background:#fff;border:1.5px solid #e8dcc8;border-radius:10px;padding:2rem;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;">
+        <!-- Pose Matching (Pose Connection + Energy Lines as levels) -->
+        <div class="eky-game-card" onclick="showGame('matching-game')" style="background:#fff;border:1.5px solid #e8dcc8;border-radius:10px;padding:2rem;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;">
           <div class="eky-rainbow-bar" style="margin:-2rem -2rem 1.75rem;"></div>
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;">
-            <div style="width:3rem;height:3rem;background:#d4ede8;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#2B6B5E;"><i class="fa-solid fa-eye"></i></div>
-            <span style="font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;background:#d4ede8;color:#2B6B5E;padding:3px 9px;border-radius:4px;font-weight:500;">Learning</span>
+            <div style="width:3rem;height:3rem;background:#d4ede8;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#2B6B5E;"><i class="fa-solid fa-clone"></i></div>
+            <span style="font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;background:#d4ede8;color:#2B6B5E;padding:3px 9px;border-radius:4px;font-weight:500;">2 Levels</span>
           </div>
-          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;margin-bottom:.6rem;">Pose Connection</div>
-          <p style="font-size:.88rem;color:#5A5653;line-height:1.6;flex-grow:1;margin-bottom:1.5rem;">Match yoga poses with their names and alignment cues — click or drag &amp; drop.</p>
+          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;margin-bottom:.6rem;">Pose Matching</div>
+          <p style="font-size:.88rem;color:#5A5653;line-height:1.6;flex-grow:1;margin-bottom:1.5rem;"><b>Level 1</b> — match poses to their names &amp; cues. <b>Level 2</b> — draw energy ropes from each pose to the gift it brings.</p>
           <div style="display:flex;align-items:center;gap:.5rem;color:#2B6B5E;font-size:.85rem;font-weight:500;"><span>Start matching</span><i class="fa-solid fa-arrow-right" style="font-size:.75rem;"></i></div>
         </div>
 
@@ -112,18 +119,6 @@
           <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;margin-bottom:.6rem;">Sun Salutation</div>
           <p style="font-size:.88rem;color:#5A5653;line-height:1.6;flex-grow:1;margin-bottom:1.5rem;">Flow a silhouette through all 12 Surya Namaskar poses. Hold arrows or drag to breathe.</p>
           <div style="display:flex;align-items:center;gap:.5rem;color:#C8472A;font-size:.85rem;font-weight:500;"><span>Begin your flow</span><i class="fa-solid fa-arrow-right" style="font-size:.75rem;"></i></div>
-        </div>
-
-        <!-- Energy Lines -->
-        <div class="eky-game-card" onclick="showGame('energy-lines')" style="background:#fff;border:1.5px solid #e8dcc8;border-radius:10px;padding:2rem;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;">
-          <div class="eky-rainbow-bar" style="margin:-2rem -2rem 1.75rem;"></div>
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;">
-            <div style="width:3rem;height:3rem;background:#ece8f5;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#7580BE;"><i class="fa-solid fa-diagram-project"></i></div>
-            <span style="font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;background:#ece8f5;color:#7580BE;padding:3px 9px;border-radius:4px;font-weight:500;">Puzzle</span>
-          </div>
-          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;margin-bottom:.6rem;">Energy Lines</div>
-          <p style="font-size:.88rem;color:#5A5653;line-height:1.6;flex-grow:1;margin-bottom:1.5rem;">Draw glowing energy ropes connecting each pose to the gift it brings the body.</p>
-          <div style="display:flex;align-items:center;gap:.5rem;color:#7580BE;font-size:.85rem;font-weight:500;"><span>Connect the flow</span><i class="fa-solid fa-arrow-right" style="font-size:.75rem;"></i></div>
         </div>
 
         <!-- Wellness Guide -->
@@ -161,18 +156,32 @@
   </div><!-- /eky-splash -->
 
 
-  <!-- ════════════ POSE MATCH ════════════ -->
-  <div id="pose-match" style="display:none; padding:1.5rem; max-width:980px; margin:0 auto;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #e8dcc8;">
+  <!-- ════════════ POSE MATCHING (Level 1: Pose Connection · Level 2: Energy Lines) ════════════ -->
+  <div id="matching-game" style="display:none; padding:1.5rem; max-width:980px; margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid #e8dcc8;">
       <div style="display:flex;align-items:center;gap:1rem;">
         <button onclick="hideGame()" style="background:none;border:none;cursor:pointer;color:#2B6B5E;padding:.5rem;border-radius:8px;display:flex;align-items:center;gap:.4rem;font-size:.85rem;"><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>
         <div>
-          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;">Pose Connection</div>
-          <div style="font-size:.8rem;color:#2B6B5E;margin-top:1px;">Match the pose to its name &amp; cue — click two, or drag one onto the other</div>
+          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;">Pose Matching</div>
+          <div id="matching-subtitle" style="font-size:.8rem;color:#2B6B5E;margin-top:1px;">Level 1 · Match the pose to its name &amp; cue — click two, or drag one onto the other</div>
         </div>
       </div>
-      <div style="text-align:right;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Score</div><div id="match-score" style="font-size:2rem;font-weight:600;color:#2B6B5E;line-height:1;">0</div></div>
+      <div id="stat-pose" style="text-align:right;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Score</div><div id="match-score" style="font-size:2rem;font-weight:600;color:#2B6B5E;line-height:1;">0</div></div>
+      <div id="stat-energy" style="text-align:right;display:none;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Linked</div><div id="energy-progress" style="font-size:2rem;font-weight:600;color:#7580BE;line-height:1;">0/5</div></div>
     </div>
+
+    <!-- Level switcher -->
+    <div id="level-tabs" style="display:flex;gap:.5rem;margin-bottom:1.5rem;">
+      <button class="level-tab active" data-level="pose" onclick="switchLevel('pose')">
+        <span style="opacity:.7;font-weight:600;">Level 1</span> · Pose Connection
+      </button>
+      <button class="level-tab" data-level="energy" onclick="switchLevel('energy')">
+        <span style="opacity:.7;font-weight:600;">Level 2</span> · Energy Lines
+      </button>
+    </div>
+
+    <!-- ─── LEVEL 1: Pose Connection ─── -->
+    <div id="level-pose">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
       <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Yoga Poses</div><div id="pose-images" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;"></div></div>
       <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Names &amp; Cues</div><div id="pose-texts" style="display:flex;flex-direction:column;gap:.6rem;"></div></div>
@@ -181,7 +190,23 @@
       <button onclick="resetMatchGame()" style="background:none;border:1px solid #e8dcc8;border-radius:8px;padding:.5rem 1rem;cursor:pointer;color:#2B6B5E;font-size:.82rem;display:flex;align-items:center;gap:.4rem;"><i class="fa-solid fa-redo"></i> New Set</button>
       <div id="match-status" style="font-size:.85rem;color:#2B6B5E;font-weight:500;"></div>
     </div>
-  </div><!-- /pose-match -->
+    </div><!-- /level-pose -->
+
+    <!-- ─── LEVEL 2: Energy Lines ─── -->
+    <div id="level-energy" style="display:none;">
+      <div id="energy-board" style="position:relative;">
+        <svg id="energy-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible;"></svg>
+        <div style="position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:3rem;">
+          <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Poses</div><div id="energy-poses" style="display:flex;flex-direction:column;gap:.7rem;"></div></div>
+          <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#7580BE;margin-bottom:.75rem;">Energy &amp; Gifts</div><div id="energy-concepts" style="display:flex;flex-direction:column;gap:.7rem;"></div></div>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;display:flex;align-items:center;justify-content:space-between;">
+        <button onclick="resetEnergyGame()" style="background:none;border:1px solid #e8dcc8;border-radius:8px;padding:.5rem 1rem;cursor:pointer;color:#7580BE;font-size:.82rem;display:flex;align-items:center;gap:.4rem;"><i class="fa-solid fa-redo"></i> New Round</button>
+        <div id="energy-status" style="font-size:.85rem;color:#7580BE;font-weight:500;"></div>
+      </div>
+    </div><!-- /level-energy -->
+  </div><!-- /matching-game -->
 
 
   <!-- ════════════ SUN SAL BREATH ════════════ -->
@@ -238,32 +263,6 @@
   </div><!-- /breath-game -->
 
 
-  <!-- ════════════ ENERGY LINES ════════════ -->
-  <div id="energy-lines" style="display:none; padding:1.5rem; max-width:980px; margin:0 auto;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #e8dcc8;">
-      <div style="display:flex;align-items:center;gap:1rem;">
-        <button onclick="hideGame()" style="background:none;border:none;cursor:pointer;color:#2B6B5E;padding:.5rem;border-radius:8px;display:flex;align-items:center;gap:.4rem;font-size:.85rem;"><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>
-        <div>
-          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;">Energy Lines</div>
-          <div style="font-size:.8rem;color:#2B6B5E;margin-top:1px;">Click a pose, then the gift it brings — draw the energy rope between them</div>
-        </div>
-      </div>
-      <div style="text-align:right;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Linked</div><div id="energy-progress" style="font-size:2rem;font-weight:600;color:#7580BE;line-height:1;">0/5</div></div>
-    </div>
-    <div id="energy-board" style="position:relative;">
-      <svg id="energy-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible;"></svg>
-      <div style="position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:3rem;">
-        <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Poses</div><div id="energy-poses" style="display:flex;flex-direction:column;gap:.7rem;"></div></div>
-        <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#7580BE;margin-bottom:.75rem;">Energy &amp; Gifts</div><div id="energy-concepts" style="display:flex;flex-direction:column;gap:.7rem;"></div></div>
-      </div>
-    </div>
-    <div style="margin-top:1.5rem;display:flex;align-items:center;justify-content:space-between;">
-      <button onclick="resetEnergyGame()" style="background:none;border:1px solid #e8dcc8;border-radius:8px;padding:.5rem 1rem;cursor:pointer;color:#7580BE;font-size:.82rem;display:flex;align-items:center;gap:.4rem;"><i class="fa-solid fa-redo"></i> New Round</button>
-      <div id="energy-status" style="font-size:.85rem;color:#7580BE;font-weight:500;"></div>
-    </div>
-  </div><!-- /energy-lines -->
-
-
   <!-- ════════════ WELLNESS GUIDE ════════════ -->
   <div id="wellness-guide" style="display:none; padding:1.5rem; max-width:980px; margin:0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #e8dcc8;">
@@ -304,7 +303,8 @@
 <script>
 /* ════════════ NAVIGATION ════════════ */
 var currentGame = null;
-var ALL_SECTIONS = ['pose-match','breath-game','energy-lines','wellness-guide'];
+var currentLevel = 'pose';
+var ALL_SECTIONS = ['matching-game','breath-game','wellness-guide'];
 
 function showGame(gameId) {
   var splash = document.getElementById('eky-splash');
@@ -315,10 +315,37 @@ function showGame(gameId) {
     section.style.display = 'block';
     window.scrollTo(0,0);
     currentGame = gameId;
-    if (gameId === 'pose-match'    && !window.matchGameInitialized)  initMatchGame();
+    if (gameId === 'matching-game') { initMatchingGame(); }
     if (gameId === 'breath-game'   && !window.breathGameInitialized) initBreathGame();
-    if (gameId === 'energy-lines'  && !window.energyGameInitialized) initEnergyGame();
     if (gameId === 'wellness-guide'&& !window.wellnessInitialized)   initWellness();
+  }
+}
+
+/* Combined matching game — Level 1 (Pose Connection) + Level 2 (Energy Lines) */
+function initMatchingGame() {
+  window.matchGameInitialized = false;
+  initMatchGame();          // fresh Level 1 board on each entry
+  switchLevel('pose');
+}
+function switchLevel(level) {
+  currentLevel = level;
+  document.querySelectorAll('#level-tabs .level-tab').forEach(function(t){
+    t.classList.toggle('active', t.dataset.level === level);
+  });
+  var lp = document.getElementById('level-pose'),   le = document.getElementById('level-energy');
+  var sp = document.getElementById('stat-pose'),    se = document.getElementById('stat-energy');
+  var sub = document.getElementById('matching-subtitle');
+  if (level === 'pose') {
+    lp.style.display='block'; le.style.display='none';
+    sp.style.display='block'; se.style.display='none';
+    if (sub) sub.innerHTML = 'Level 1 · Match the pose to its name &amp; cue — click two, or drag one onto the other';
+    if (!window.matchGameInitialized) initMatchGame();
+  } else {
+    lp.style.display='none'; le.style.display='block';
+    sp.style.display='none'; se.style.display='block';
+    if (sub) sub.innerHTML = 'Level 2 · Click a pose, then the gift it brings — draw the energy rope between them';
+    buildEnergyRound();              // rebuild while visible so line coords are correct
+    window.energyGameInitialized = true;
   }
 }
 function hideGame() {
@@ -403,7 +430,7 @@ function selectTextCard(card,id){
     matchScore+=10; matchedPairs++;
     var s=document.getElementById('match-score'); if(s) s.textContent=matchScore;
     selectedImage=null;
-    if(matchedPairs===matchTotal){ if(st) st.innerHTML='<span style="color:#2B6B5E;font-weight:600">Beautiful! All poses matched. Score: '+matchScore+'</span>'; warmConfetti(); }
+    if(matchedPairs===matchTotal){ if(st) st.innerHTML='<span style="color:#2B6B5E;font-weight:600">Beautiful! All poses matched. Score: '+matchScore+'</span> &nbsp;<button onclick="switchLevel(\'energy\')" style="background:#7580BE18;color:#7580BE;border:none;border-radius:7px;padding:.35rem .7rem;font-size:.78rem;font-weight:600;cursor:pointer;">Continue to Level 2 <i class="fa-solid fa-arrow-right" style="font-size:.7rem"></i></button>'; warmConfetti(); }
     else if(st) st.textContent=matchedPairs+'/'+matchTotal+' matched';
   } else {
     card.style.borderColor='#C8472A'; setTimeout(function(){card.style.borderColor='';},800);
@@ -568,11 +595,7 @@ document.addEventListener('keyup',function(e){
 var enPairs=5, enSelPose=null, enLinked=0, enConnections=[];
 var enColors=['#C8472A','#E8A07A','#2B6B5E','#7580BE','#F5E535'];
 
-function initEnergyGame(){
-  window.energyGameInitialized=true;
-  buildEnergyRound();
-  window.addEventListener('resize', redrawEnergyLines);
-}
+window.addEventListener('resize', redrawEnergyLines);
 function buildEnergyRound(){
   enSelPose=null; enLinked=0; enConnections=[];
   var set = poseLibrary.slice().sort(function(){return Math.random()-0.5;}).slice(0, enPairs);
@@ -654,7 +677,7 @@ function drawEnergyLine(aEl,bEl,color,animate){
   });
 }
 function redrawEnergyLines(){
-  if(currentGame!=='energy-lines') return;
+  if(currentGame!=='matching-game' || currentLevel!=='energy') return;
   var svg=document.getElementById('energy-svg'); if(!svg) return;
   svg.innerHTML='';
   enConnections.forEach(function(c){ drawEnergyLine(c.a,c.b,c.color,false); });
