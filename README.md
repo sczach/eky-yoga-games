@@ -26,7 +26,8 @@ Gamified resolver: select how you feel (anxious, low energy, stiff, short of bre
 Single self-contained `index.html` — vanilla HTML/CSS/JS, no build step. Fonts and Font Awesome via CDN. Logos served from `./uploads/`. Ready for Wix iframe embed or Vercel standalone.
 
 ## Development
-- Pose library of 60+ poses with rich metadata (Sanskrit, alignment cue, energy/gift, category). Each round draws a fresh random subset, so the matching levels stay varied across plays.
+- Pose library of 60+ poses with rich metadata (Sanskrit, alignment cue, energy/gift, category) and a hand-authored **vector diagram** for each (a joint-based stick-figure silhouette, drawn from `POSE_ART`).
+- The matching levels deal through the whole deck without repeats (a "poses seen" counter tracks progress to 62), so all poses are reachable across rounds.
 - LocalStorage stores the Wellness Guide sequence and session log.
 - Responsive, mobile-friendly layout.
 
