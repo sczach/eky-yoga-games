@@ -359,18 +359,81 @@ function hideGame() {
 /* ════════════ SHARED: POSE LIBRARY ════════════ */
 /* Rich metadata reused across games. energy = the "gift" used by Energy Lines. */
 var poseLibrary = [
-  { id:1,  name:"Mountain Pose",  sanskrit:"Tadasana",              cue:"Ground through all four corners of the feet, lift through the crown", energy:"Grounding & steady posture", category:"standing" },
-  { id:2,  name:"Forward Fold",   sanskrit:"Uttanasana",            cue:"Hinge from the hips, let the head and neck release heavy",            energy:"Calms a busy mind",        category:"standing" },
-  { id:3,  name:"Downward Dog",   sanskrit:"Adho Mukha Svanasana",  cue:"Press hands & feet down, lift the sitting bones high",                 energy:"Wakes up the whole body",  category:"standing" },
-  { id:4,  name:"Plank Pose",     sanskrit:"Phalakasana",           cue:"Shoulders over wrists, one long line from heels to crown",             energy:"Builds core strength",     category:"strength" },
-  { id:5,  name:"Cobra",          sanskrit:"Bhujangasana",          cue:"Lift the chest, draw shoulders down, keep low ribs heavy",             energy:"Opens the heart",          category:"backbend" },
-  { id:6,  name:"Child's Pose",   sanskrit:"Balasana",              cue:"Big toes together, knees wide, forehead rests on the mat",             energy:"Deep rest & surrender",    category:"restorative" },
-  { id:7,  name:"Warrior II",     sanskrit:"Virabhadrasana II",     cue:"Front knee over ankle, arms reach long, gaze past the front hand",     energy:"Strength & focus",         category:"standing" },
-  { id:8,  name:"Bridge Pose",    sanskrit:"Setu Bandhasana",       cue:"Press into the feet, lift the hips, roll shoulders under",             energy:"Lifts low energy",         category:"backbend" },
-  { id:9,  name:"Cat–Cow",        sanskrit:"Marjaryasana–Bitilasana", cue:"Move spine with breath — round on exhale, open on inhale",           energy:"Frees a stiff spine",      category:"warmup" },
-  { id:10, name:"Tree Pose",      sanskrit:"Vrksasana",             cue:"Root the standing foot, sole to inner thigh or calf, grow tall",       energy:"Balance & calm focus",     category:"balance" },
-  { id:11, name:"Legs Up the Wall", sanskrit:"Viparita Karani",     cue:"Hips near the wall, legs rest up, arms soften open",                   energy:"Eases tired legs & nerves",category:"restorative" },
-  { id:12, name:"Seated Twist",   sanskrit:"Ardha Matsyendrasana",  cue:"Sit tall, inhale to lengthen, exhale to gently revolve",               energy:"Wrings out tension",       category:"seated" }
+  // ── Standing ──
+  { id:1,  name:"Mountain Pose",      sanskrit:"Tadasana",                cue:"Ground through all four corners of the feet, lift through the crown",  energy:"Grounding & steady posture",   category:"standing" },
+  { id:2,  name:"Forward Fold",       sanskrit:"Uttanasana",              cue:"Hinge from the hips, let the head and neck release heavy",             energy:"Calms a busy mind",            category:"standing" },
+  { id:3,  name:"Halfway Lift",       sanskrit:"Ardha Uttanasana",        cue:"Flat back, hands to shins or thighs, gaze just past the toes",         energy:"Lengthens the whole spine",    category:"standing" },
+  { id:4,  name:"Chair Pose",         sanskrit:"Utkatasana",              cue:"Sink the hips back, weight in the heels, arms reach up by the ears",   energy:"Builds heat & leg strength",   category:"standing" },
+  { id:5,  name:"Warrior I",          sanskrit:"Virabhadrasana I",        cue:"Square the hips forward, back heel grounded, arms overhead",           energy:"Strength & determination",     category:"standing" },
+  { id:6,  name:"Warrior II",         sanskrit:"Virabhadrasana II",       cue:"Front knee over ankle, arms reach long, gaze past the front hand",     energy:"Strength & focus",             category:"standing" },
+  { id:7,  name:"Reverse Warrior",    sanskrit:"Viparita Virabhadrasana", cue:"Front knee bent, back hand slides down the leg, top arm reaches over", energy:"Opens the side body",          category:"standing" },
+  { id:8,  name:"Extended Side Angle",sanskrit:"Utthita Parsvakonasana",  cue:"Forearm to thigh or hand down, top arm reaches over the ear",          energy:"Stretches the full side line", category:"standing" },
+  { id:9,  name:"Triangle Pose",      sanskrit:"Trikonasana",             cue:"Straight legs, reach long, then tilt and lower the bottom hand",       energy:"Opens hips & chest",           category:"standing" },
+  { id:10, name:"Pyramid Pose",       sanskrit:"Parsvottanasana",         cue:"Hips square, fold over the front leg with a long spine",               energy:"Deep hamstring release",       category:"standing" },
+  { id:11, name:"Wide-Legged Fold",   sanskrit:"Prasarita Padottanasana", cue:"Feet parallel and wide, fold from the hips, crown toward the floor",   energy:"Settles & cools the body",     category:"standing" },
+  { id:12, name:"Goddess Pose",       sanskrit:"Utkata Konasana",         cue:"Wide stance, toes turned out, sink the hips toward knee height",       energy:"Powerful hip & thigh opener",  category:"standing" },
+  { id:13, name:"Gate Pose",          sanskrit:"Parighasana",             cue:"Kneel, extend one leg out, side-bend over the long leg",               energy:"Opens the side body & lungs",  category:"standing" },
+
+  // ── Balance ──
+  { id:14, name:"Tree Pose",          sanskrit:"Vrksasana",               cue:"Root the standing foot, sole to inner thigh or calf, grow tall",       energy:"Balance & calm focus",         category:"balance" },
+  { id:15, name:"Eagle Pose",         sanskrit:"Garudasana",              cue:"Wrap the arms and legs, sink low, lengthen the spine",                 energy:"Concentration & joint mobility", category:"balance" },
+  { id:16, name:"Dancer's Pose",      sanskrit:"Natarajasana",            cue:"Kick the lifted foot into the hand, reach the front arm forward",      energy:"Grace, balance & backbend",    category:"balance" },
+  { id:17, name:"Warrior III",        sanskrit:"Virabhadrasana III",      cue:"Hinge to a T, one straight line from crown to lifted heel",            energy:"Full-body power & balance",    category:"balance" },
+  { id:18, name:"Half Moon",          sanskrit:"Ardha Chandrasana",       cue:"Bottom hand down, top leg lifts parallel, open the chest skyward",     energy:"Balance & expansion",          category:"balance" },
+  { id:19, name:"Standing Big-Toe Hold", sanskrit:"Utthita Hasta Padangusthasana", cue:"Lift and extend one leg, hold the big toe, stand tall",        energy:"Hamstring strength & poise",   category:"balance" },
+
+  // ── Seated & forward fold ──
+  { id:20, name:"Easy Pose",          sanskrit:"Sukhasana",               cue:"Cross the shins, sit tall on the sit bones, soften the shoulders",     energy:"Centering & calm",             category:"seated" },
+  { id:21, name:"Staff Pose",         sanskrit:"Dandasana",               cue:"Legs straight, feet flexed, lengthen up through the spine",            energy:"Posture & core awareness",     category:"seated" },
+  { id:22, name:"Seated Forward Fold",sanskrit:"Paschimottanasana",       cue:"Reach forward over the legs, leading with the chest not the chin",     energy:"Calms the mind, stretches the back", category:"seated" },
+  { id:23, name:"Head-to-Knee Pose",  sanskrit:"Janu Sirsasana",          cue:"One sole to the inner thigh, fold over the long leg",                  energy:"Quiets the mind",              category:"seated" },
+  { id:24, name:"Bound Angle Pose",   sanskrit:"Baddha Konasana",         cue:"Soles together, knees wide, sit tall and soften the hips",            energy:"Opens hips & groin",           category:"seated" },
+  { id:25, name:"Wide-Angle Seated Fold", sanskrit:"Upavistha Konasana",  cue:"Legs wide, walk the hands forward with a long spine",                  energy:"Deep inner-thigh release",     category:"seated" },
+  { id:26, name:"Cow Face Pose",      sanskrit:"Gomukhasana",             cue:"Stack the knees, bind the hands behind the back",                      energy:"Opens shoulders & hips",       category:"seated" },
+  { id:27, name:"Hero Pose",          sanskrit:"Virasana",                cue:"Sit between the heels, hips heavy, spine tall",                        energy:"Stretches thighs & ankles",    category:"seated" },
+  { id:28, name:"Boat Pose",          sanskrit:"Navasana",                cue:"Lift the chest and shins, balance behind the sit bones",               energy:"Core strength & focus",        category:"seated" },
+  { id:29, name:"Seated Twist",       sanskrit:"Ardha Matsyendrasana",    cue:"Sit tall, inhale to lengthen, exhale to gently revolve",               energy:"Wrings out tension",           category:"seated" },
+  { id:30, name:"Child's Pose",       sanskrit:"Balasana",                cue:"Big toes together, knees wide, forehead rests on the mat",             energy:"Deep rest & surrender",        category:"restorative" },
+
+  // ── Backbends ──
+  { id:31, name:"Cobra",              sanskrit:"Bhujangasana",            cue:"Lift the chest, draw the shoulders down, keep the low ribs heavy",     energy:"Opens the heart",              category:"backbend" },
+  { id:32, name:"Upward-Facing Dog",  sanskrit:"Urdhva Mukha Svanasana",  cue:"Press the tops of the feet, lift the thighs and chest",                energy:"Energizing heart opener",      category:"backbend" },
+  { id:33, name:"Sphinx Pose",        sanskrit:"Salamba Bhujangasana",    cue:"Forearms down under the shoulders, lift the chest gently",             energy:"Gentle back strengthener",     category:"backbend" },
+  { id:34, name:"Bridge Pose",        sanskrit:"Setu Bandhasana",         cue:"Press into the feet, lift the hips, roll the shoulders under",         energy:"Lifts low energy",             category:"backbend" },
+  { id:35, name:"Wheel Pose",         sanskrit:"Urdhva Dhanurasana",      cue:"Hands by the ears, press the floor away, lift the whole body up",      energy:"Full chest & shoulder opener", category:"backbend" },
+  { id:36, name:"Bow Pose",           sanskrit:"Dhanurasana",             cue:"Hold the ankles, kick the feet into the hands to lift",                energy:"Opens the front body",         category:"backbend" },
+  { id:37, name:"Camel Pose",         sanskrit:"Ustrasana",               cue:"Hips stacked over the knees, reach back, lift the chest",              energy:"Invigorating heart opener",    category:"backbend" },
+  { id:38, name:"Locust Pose",        sanskrit:"Salabhasana",             cue:"Lift the chest, arms and legs off the mat at once",                    energy:"Strengthens the back body",    category:"backbend" },
+  { id:39, name:"Fish Pose",          sanskrit:"Matsyasana",              cue:"Lift the chest, crown gently down, open across the throat",            energy:"Opens chest & throat",         category:"backbend" },
+
+  // ── Hip openers & lunges ──
+  { id:40, name:"Low Lunge",          sanskrit:"Anjaneyasana",            cue:"Sink the hips low, lift the chest, reach the arms up",                 energy:"Opens the hip flexors",        category:"hip" },
+  { id:41, name:"High Lunge",         sanskrit:"Ashta Chandrasana",       cue:"Back heel lifted, front knee stacked, reach up tall",                  energy:"Stamina & leg strength",       category:"hip" },
+  { id:42, name:"Lizard Pose",        sanskrit:"Utthan Pristhasana",      cue:"Both hands inside the front foot, sink the hips toward the floor",     energy:"Deep hip opener",              category:"hip" },
+  { id:43, name:"Pigeon Pose",        sanskrit:"Eka Pada Rajakapotasana", cue:"Front shin forward, back leg long, fold over the front leg",           energy:"Releases deep hip tension",    category:"hip" },
+  { id:44, name:"Garland Pose",       sanskrit:"Malasana",                cue:"Deep squat, elbows press the knees wide, chest lifts",                 energy:"Opens hips & ankles",          category:"hip" },
+  { id:45, name:"Frog Pose",          sanskrit:"Mandukasana",             cue:"Knees wide, ankles in line with knees, sink the hips back slowly",     energy:"Intense inner-hip opener",     category:"hip" },
+  { id:46, name:"Happy Baby",         sanskrit:"Ananda Balasana",         cue:"Hold the outer feet, draw the knees toward the floor",                 energy:"Releases the lower back",      category:"hip" },
+
+  // ── Twists & core ──
+  { id:47, name:"Revolved Triangle",  sanskrit:"Parivrtta Trikonasana",   cue:"Square the hips, twist and reach the opposite hand toward the floor",  energy:"Detoxifying twist",            category:"twist" },
+  { id:48, name:"Revolved Chair",     sanskrit:"Parivrtta Utkatasana",    cue:"Sink low, hook the elbow across the opposite knee",                    energy:"Twist & leg strength",         category:"twist" },
+  { id:49, name:"Supine Twist",       sanskrit:"Supta Matsyendrasana",    cue:"Drop the knees to one side, turn the gaze the other way",              energy:"Releases the whole spine",     category:"twist" },
+  { id:50, name:"Thread the Needle",  sanskrit:"Parsva Balasana",         cue:"Thread one arm under the body, rest the shoulder and ear down",        energy:"Frees the upper back",         category:"twist" },
+  { id:51, name:"Plank Pose",         sanskrit:"Phalakasana",             cue:"Shoulders over wrists, one long line from heels to crown",             energy:"Builds core strength",         category:"core" },
+  { id:52, name:"Forearm Plank",      sanskrit:"Phalakasana (variation)", cue:"Elbows under the shoulders, hips level, tailbone long",                energy:"Deep core stability",          category:"core" },
+  { id:53, name:"Side Plank",         sanskrit:"Vasisthasana",            cue:"Stack the feet, lift the hips, reach the top arm to the sky",          energy:"Core & wrist strength",        category:"core" },
+  { id:54, name:"Dolphin Pose",       sanskrit:"Ardha Pincha Mayurasana", cue:"Forearms down, lift the hips high, head between the arms",             energy:"Strengthens shoulders & core", category:"core" },
+  { id:55, name:"Crow Pose",          sanskrit:"Bakasana",                cue:"Knees high onto the upper arms, shift forward, float the feet up",     energy:"Arm balance & confidence",     category:"core" },
+
+  // ── Warm-up, inversion & restorative ──
+  { id:56, name:"Cat–Cow",            sanskrit:"Marjaryasana–Bitilasana", cue:"Round the spine on the exhale, open the chest on the inhale",          energy:"Frees a stiff spine",          category:"warmup" },
+  { id:57, name:"Downward Dog",       sanskrit:"Adho Mukha Svanasana",    cue:"Press hands and feet down, lift the sitting bones high",               energy:"Wakes up the whole body",      category:"warmup" },
+  { id:58, name:"Legs Up the Wall",   sanskrit:"Viparita Karani",         cue:"Hips near the wall, legs rest up, arms soften open",                   energy:"Eases tired legs & nerves",    category:"restorative" },
+  { id:59, name:"Shoulderstand",      sanskrit:"Salamba Sarvangasana",    cue:"Support the back with the hands, reach the legs up tall",              energy:"Calms & rejuvenates",          category:"inversion" },
+  { id:60, name:"Plow Pose",          sanskrit:"Halasana",                cue:"From the shoulders, reach the feet overhead toward the floor",         energy:"Stretches spine & shoulders",  category:"inversion" },
+  { id:61, name:"Reclining Bound Angle", sanskrit:"Supta Baddha Konasana", cue:"Soles together, knees fall open, rest the arms by the sides",         energy:"Restorative hip release",      category:"restorative" },
+  { id:62, name:"Corpse Pose",        sanskrit:"Savasana",                cue:"Lie still, let everything soften, breathe naturally",                  energy:"Total rest & integration",     category:"restorative" }
 ];
 function findPose(name){ for(var i=0;i<poseLibrary.length;i++){ if(poseLibrary[i].name===name) return poseLibrary[i]; } return null; }
 
