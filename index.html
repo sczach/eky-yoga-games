@@ -1,28 +1,794 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="./support.js"></script>
+<title>EKY Yoga Games | Play &amp; Learn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #faf6f1; color: #3d3230; }
+
+  /* Brand palette:
+     #C8472A red-orange · #E8A07A peach · #2B6B5E teal · #7580BE periwinkle · #F5E535 yellow */
+
+  .eky-rainbow-bar { height:4px; border-radius:8px 8px 0 0;
+    background:linear-gradient(90deg,#C8472A 0%,#E8A07A 25%,#2B6B5E 50%,#7580BE 75%,#F5E535 100%); }
+
+  /* Game card hover (splash) */
+  .eky-game-card { transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease; }
+  .eky-game-card:hover { border-color: #c4a876 !important; transform: translateY(-3px); box-shadow: 0 10px 28px rgba(139,111,71,0.13); }
+
+  /* Pose match interactive states */
+  .match-card { cursor: pointer; user-select: none; transition: border-color 0.2s ease, opacity 0.25s ease; }
+  .match-card.selected { border-color: #C8472A !important; box-shadow: 0 0 0 3px rgba(200,71,42,0.18); }
+  .match-card.matched { opacity: 0.5; pointer-events: none; }
+  .match-card.dragging { opacity: 0.6; }
+  .match-card.drop-hover { border-color: #2B6B5E !important; box-shadow: 0 0 0 3px rgba(43,107,94,0.2); }
+
+  /* Breath game stage */
+  .breath-stage-wrap { width: 560px; max-width: 100%; }
+  .breath-stage { position: relative; width: 100%; padding-top: 100%; touch-action: none; user-select: none; }
+
+  /* Clock labels */
+  .clock-label {
+    position: absolute; width: 88px; text-align: center;
+    transform: translate(-50%, -50%);
+    transition: color .3s ease, transform .3s ease;
+    color: #b8a894; line-height: 1.1; pointer-events: none;
+  }
+  .clock-label .lbl-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #ede7de; color: #9d8b7a;
+    font-size: 11px; font-weight: 600; margin-bottom: 3px;
+    transition: all .3s ease;
+  }
+  .clock-label .lbl-name { font-size: 10px; font-weight: 500; letter-spacing: .2px; }
+  .clock-label.done { color: #2B6B5E; }
+  .clock-label.done .lbl-num { background: #d4ede8; color: #2B6B5E; }
+  .clock-label.active { color: #C8472A; transform: translate(-50%,-50%) scale(1.12); }
+  .clock-label.active .lbl-num { background: #C8472A; color: #fff; box-shadow: 0 0 0 4px rgba(200,71,42,0.25); }
+
+  #figure-svg { overflow: visible; }
+  #figure-svg .breath-ring { transition: r .15s linear, opacity .3s ease; }
+
+  /* Level switcher */
+  .level-tab { font-family:'Inter',sans-serif; font-size:.82rem; color:#5A5653; background:#fff;
+    border:1.5px solid #e8dcc8; border-radius:9px; padding:.55rem 1.1rem; cursor:pointer;
+    transition: border-color .2s ease, color .2s ease, background .2s ease; }
+  .level-tab:hover { border-color:#c4a876; }
+  .level-tab.active { border-color:#2B6B5E; color:#2B6B5E; background:#f3faf8; font-weight:500; }
+
+  /* Energy Lines */
+  .energy-card { cursor: pointer; user-select: none; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+  .energy-card:hover { border-color: #c4a876; }
+  .energy-card.selected { border-color: #C8472A !important; box-shadow: 0 0 0 3px rgba(200,71,42,0.18); transform: scale(1.02); }
+  .energy-card.linked { border-color: #2B6B5E !important; background: #f3faf8 !important; }
+
+  /* Wellness Guide */
+  .issue-card { cursor: pointer; user-select: none; transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+  .issue-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(139,111,71,0.12); }
+  .issue-card.active { border-color: #C8472A !important; box-shadow: 0 0 0 3px rgba(200,71,42,0.15); }
+  .rec-add { transition: background .15s ease, color .15s ease; }
+
+  .eky-btn-primary { background:#F5E535; color:#3D3A38; }
+  .eky-btn-primary:hover { background:#ecdc1f; }
+</style>
 </head>
 <body>
-<x-dc>
-<helmet>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Full styles from your advanced .dc.html */
-    /* Branding with your logo and rainbow palette */
-  </style>
-  <script src="./eky-games.js"></script>
-</helmet>
 
-<!-- Full HTML structure with hub, Pose Match, Breath Game, Energy Lines, Wellness Guide -->
-<!-- New modes implemented per specifications -->
+<div style="min-height:100vh; background:linear-gradient(160deg,#fdfcf5 0%,#fef9df 100%);">
 
-</x-dc>
+  <!-- ════════════ SPLASH / HUB ════════════ -->
+  <div id="eky-splash">
+    <header style="position:sticky;top:0;z-index:50;background:rgba(253,252,245,0.96);border-bottom:1px solid rgba(200,71,42,0.12);padding:.75rem 1.5rem;">
+      <div style="max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;">
+        <img src="./uploads/Logo - Centered png.png" style="height:44px;object-fit:contain;" alt="EKY Yoga Co.">
+        <div style="font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:#3D3A38;font-weight:400;">Games</div>
+      </div>
+    </header>
+
+    <main style="max-width:980px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+      <div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:#2B6B5E;font-weight:500;margin-bottom:1.25rem;">Choose a game</div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem;margin-bottom:3.5rem;">
+
+        <!-- Pose Matching (Pose Connection + Energy Lines as levels) -->
+        <div class="eky-game-card" onclick="showGame('matching-game')" style="background:#fff;border:1.5px solid #e8dcc8;border-radius:10px;padding:2rem;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;">
+          <div class="eky-rainbow-bar" style="margin:-2rem -2rem 1.75rem;"></div>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;">
+            <div style="width:3rem;height:3rem;background:#d4ede8;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#2B6B5E;"><i class="fa-solid fa-clone"></i></div>
+            <span style="font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;background:#d4ede8;color:#2B6B5E;padding:3px 9px;border-radius:4px;font-weight:500;">2 Levels</span>
+          </div>
+          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;margin-bottom:.6rem;">Pose Matching</div>
+          <p style="font-size:.88rem;color:#5A5653;line-height:1.6;flex-grow:1;margin-bottom:1.5rem;"><b>Level 1</b> — match poses to their names &amp; cues. <b>Level 2</b> — draw energy ropes from each pose to the gift it brings.</p>
+          <div style="display:flex;align-items:center;gap:.5rem;color:#2B6B5E;font-size:.85rem;font-weight:500;"><span>Start matching</span><i class="fa-solid fa-arrow-right" style="font-size:.75rem;"></i></div>
+        </div>
+
+        <!-- Sun Salutation -->
+        <div class="eky-game-card" onclick="showGame('breath-game')" style="background:#fff;border:1.5px solid #e8dcc8;border-radius:10px;padding:2rem;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;">
+          <div class="eky-rainbow-bar" style="margin:-2rem -2rem 1.75rem;"></div>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;">
+            <img src="./uploads/Logo - Icon jpg.jpg" style="width:3rem;height:3rem;border-radius:8px;object-fit:cover;" alt="EKY Yoga Co.">
+            <span style="font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;background:#ece8f5;color:#7580BE;padding:3px 9px;border-radius:4px;font-weight:500;">Breath</span>
+          </div>
+          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;margin-bottom:.6rem;">Sun Salutation</div>
+          <p style="font-size:.88rem;color:#5A5653;line-height:1.6;flex-grow:1;margin-bottom:1.5rem;">Flow a silhouette through all 12 Surya Namaskar poses. Hold arrows or drag to breathe.</p>
+          <div style="display:flex;align-items:center;gap:.5rem;color:#C8472A;font-size:.85rem;font-weight:500;"><span>Begin your flow</span><i class="fa-solid fa-arrow-right" style="font-size:.75rem;"></i></div>
+        </div>
+
+        <!-- Wellness Guide -->
+        <div class="eky-game-card" onclick="showGame('wellness-guide')" style="background:#fff;border:1.5px solid #e8dcc8;border-radius:10px;padding:2rem;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;">
+          <div class="eky-rainbow-bar" style="margin:-2rem -2rem 1.75rem;"></div>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;">
+            <div style="width:3rem;height:3rem;background:#fbe9c9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#C8472A;"><i class="fa-solid fa-heart-pulse"></i></div>
+            <span style="font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;background:#fbe9c9;color:#C8472A;padding:3px 9px;border-radius:4px;font-weight:500;">Wellness</span>
+          </div>
+          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;margin-bottom:.6rem;">Wellness Guide</div>
+          <p style="font-size:.88rem;color:#5A5653;line-height:1.6;flex-grow:1;margin-bottom:1.5rem;">Tell us how you feel and build a personal pose &amp; breath sequence to meet it.</p>
+          <div style="display:flex;align-items:center;gap:.5rem;color:#C8472A;font-size:.85rem;font-weight:500;"><span>Find your practice</span><i class="fa-solid fa-arrow-right" style="font-size:.75rem;"></i></div>
+        </div>
+
+      </div>
+
+      <!-- Mission -->
+      <div style="background:#fffde8;border:1px solid #e8dcc8;border-radius:10px;padding:2.5rem 2rem;text-align:center;overflow:hidden;position:relative;">
+        <div class="eky-rainbow-bar" style="position:absolute;top:0;left:0;right:0;"></div>
+        <img src="./uploads/Logo - Icon jpg.jpg" style="width:54px;height:54px;border-radius:50%;margin:0 auto 1.25rem;display:block;object-fit:cover;" alt="EKY Yoga Co.">
+        <div style="font-family:'Lora',serif;font-size:1.7rem;font-weight:600;color:#3D3A38;margin-bottom:.75rem;">Move. Breathe. Connect.</div>
+        <p style="font-size:.92rem;color:#5A5653;max-width:520px;margin:0 auto 2rem;line-height:1.8;">Calming browser games to help you discover yoga poses and the power of your breath. Created by EKY Yoga Co. for accessible community wellness in Eastern Kentucky.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1.5rem;padding-top:2rem;border-top:1px solid #f0e6da;">
+          <div><div style="font-size:1.5rem;margin-bottom:.5rem;opacity:.7;">🧘</div><div style="font-size:.85rem;font-weight:600;color:#3D3A38;margin-bottom:.3rem;">All Levels Welcome</div><div style="font-size:.78rem;color:#7A7470;line-height:1.5;">Gentle and accessible for everyone.</div></div>
+          <div><div style="font-size:1.5rem;margin-bottom:.5rem;opacity:.7;">🌬️</div><div style="font-size:.85rem;font-weight:600;color:#3D3A38;margin-bottom:.3rem;">Breath-First</div><div style="font-size:.78rem;color:#7A7470;line-height:1.5;">Every game centers on conscious breath.</div></div>
+          <div><div style="font-size:1.5rem;margin-bottom:.5rem;opacity:.7;">✨</div><div style="font-size:.85rem;font-weight:600;color:#3D3A38;margin-bottom:.3rem;">No Stress</div><div style="font-size:.78rem;color:#7A7470;line-height:1.5;">No timers, just learning and flow.</div></div>
+        </div>
+      </div>
+    </main>
+
+    <footer style="text-align:center;padding:1.5rem;font-size:.72rem;color:#c4b8a8;border-top:1px solid #ede6d8;">
+      EKY Yoga Co. LLC · Salyersville, Kentucky ·
+      <a href="https://github.com/sczach/eky-yoga-games" target="_blank" style="color:#c4b8a8;text-decoration:underline;">GitHub</a>
+    </footer>
+  </div><!-- /eky-splash -->
+
+
+  <!-- ════════════ POSE MATCHING (Level 1: Pose Connection · Level 2: Energy Lines) ════════════ -->
+  <div id="matching-game" style="display:none; padding:1.5rem; max-width:980px; margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid #e8dcc8;">
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <button onclick="hideGame()" style="background:none;border:none;cursor:pointer;color:#2B6B5E;padding:.5rem;border-radius:8px;display:flex;align-items:center;gap:.4rem;font-size:.85rem;"><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>
+        <div>
+          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;">Pose Matching</div>
+          <div id="matching-subtitle" style="font-size:.8rem;color:#2B6B5E;margin-top:1px;">Level 1 · Match the pose to its name &amp; cue — click two, or drag one onto the other</div>
+        </div>
+      </div>
+      <div id="stat-pose" style="text-align:right;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Score</div><div id="match-score" style="font-size:2rem;font-weight:600;color:#2B6B5E;line-height:1;">0</div></div>
+      <div id="stat-energy" style="text-align:right;display:none;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Linked</div><div id="energy-progress" style="font-size:2rem;font-weight:600;color:#7580BE;line-height:1;">0/5</div></div>
+    </div>
+
+    <!-- Level switcher -->
+    <div id="level-tabs" style="display:flex;gap:.5rem;margin-bottom:1.5rem;">
+      <button class="level-tab active" data-level="pose" onclick="switchLevel('pose')">
+        <span style="opacity:.7;font-weight:600;">Level 1</span> · Pose Connection
+      </button>
+      <button class="level-tab" data-level="energy" onclick="switchLevel('energy')">
+        <span style="opacity:.7;font-weight:600;">Level 2</span> · Energy Lines
+      </button>
+    </div>
+
+    <!-- ─── LEVEL 1: Pose Connection ─── -->
+    <div id="level-pose">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+      <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Yoga Poses</div><div id="pose-images" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;"></div></div>
+      <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Names &amp; Cues</div><div id="pose-texts" style="display:flex;flex-direction:column;gap:.6rem;"></div></div>
+    </div>
+    <div style="margin-top:1.5rem;display:flex;align-items:center;justify-content:space-between;">
+      <button onclick="resetMatchGame()" style="background:none;border:1px solid #e8dcc8;border-radius:8px;padding:.5rem 1rem;cursor:pointer;color:#2B6B5E;font-size:.82rem;display:flex;align-items:center;gap:.4rem;"><i class="fa-solid fa-redo"></i> New Set</button>
+      <div id="match-status" style="font-size:.85rem;color:#2B6B5E;font-weight:500;"></div>
+    </div>
+    </div><!-- /level-pose -->
+
+    <!-- ─── LEVEL 2: Energy Lines ─── -->
+    <div id="level-energy" style="display:none;">
+      <div id="energy-board" style="position:relative;">
+        <svg id="energy-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible;"></svg>
+        <div style="position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:3rem;">
+          <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Poses</div><div id="energy-poses" style="display:flex;flex-direction:column;gap:.7rem;"></div></div>
+          <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#7580BE;margin-bottom:.75rem;">Energy &amp; Gifts</div><div id="energy-concepts" style="display:flex;flex-direction:column;gap:.7rem;"></div></div>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;display:flex;align-items:center;justify-content:space-between;">
+        <button onclick="resetEnergyGame()" style="background:none;border:1px solid #e8dcc8;border-radius:8px;padding:.5rem 1rem;cursor:pointer;color:#7580BE;font-size:.82rem;display:flex;align-items:center;gap:.4rem;"><i class="fa-solid fa-redo"></i> New Round</button>
+        <div id="energy-status" style="font-size:.85rem;color:#7580BE;font-weight:500;"></div>
+      </div>
+    </div><!-- /level-energy -->
+  </div><!-- /matching-game -->
+
+
+  <!-- ════════════ SUN SAL BREATH ════════════ -->
+  <div id="breath-game" style="display:none; padding:1.5rem; max-width:980px; margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #e8dcc8;">
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <button onclick="hideGame()" style="background:none;border:none;cursor:pointer;color:#2B6B5E;padding:.5rem;border-radius:8px;display:flex;align-items:center;gap:.4rem;font-size:.85rem;"><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>
+        <div>
+          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;">Sun Salutation Breath</div>
+          <div style="font-size:.8rem;color:#2B6B5E;margin-top:1px;">Hold ↑ to inhale · Hold ↓ to exhale · flow without pausing</div>
+        </div>
+      </div>
+      <div style="text-align:right;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Flow</div><div id="breath-accuracy" style="font-size:2rem;font-weight:600;color:#C8472A;line-height:1;">--</div></div>
+    </div>
+    <div id="breath-prompt" style="text-align:center;color:#2B6B5E;font-size:.9rem;font-weight:500;margin-bottom:1.25rem;min-height:22px;">Press <b>Start Flow</b>, then hold the arrow keys to breathe through the poses.</div>
+    <div style="display:flex;justify-content:center;padding:0 1rem;">
+      <div class="breath-stage-wrap">
+        <div id="breath-stage" class="breath-stage" tabindex="0">
+          <svg viewBox="0 0 560 560" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none">
+            <circle cx="280" cy="280" r="215" fill="#C8472A"></circle>
+            <circle cx="280" cy="280" r="193" fill="#E8A07A"></circle>
+            <circle cx="280" cy="280" r="179" fill="#2B6B5E"></circle>
+            <circle cx="280" cy="280" r="163" fill="#7580BE"></circle>
+            <circle cx="280" cy="280" r="145" fill="#F5E535"></circle>
+            <circle cx="280" cy="280" r="228" fill="none" stroke="#e2d8cc" stroke-width="7"></circle>
+            <path id="progress-arc" d="" fill="none" stroke="#3D3A38" stroke-width="7" stroke-linecap="round"></path>
+          </svg>
+          <div id="clock-labels" style="position:absolute;inset:0;pointer-events:none;"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;">
+            <svg id="figure-svg" viewBox="0 0 200 220" style="width:200px;height:220px;"></svg>
+            <div id="breath-phase" style="font-size:.65rem;font-weight:700;letter-spacing:.25em;color:#2B6B5E;margin-top:4px;">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:420px;margin:1.5rem auto 0;">
+      <div style="background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:1.25rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">
+        <div>
+          <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;margin-bottom:2px;">Current Pose</div>
+          <div id="current-pose" style="font-size:1.05rem;font-weight:600;color:#3D3A38;">Mountain / Prayer</div>
+          <div id="current-pose-sanskrit" style="font-size:.82rem;color:#2B6B5E;">Pranamasana</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;margin-bottom:2px;">Next</div>
+          <div id="next-pose" style="font-size:.82rem;font-weight:500;color:#3D3A38;line-height:1.3;">Raised Arms <span style="color:#E8A07A;">(Hasta Uttanasana)</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:.75rem;">
+        <button id="start-breath-btn" class="eky-btn-primary" style="flex:1;padding:.9rem;border:none;border-radius:9px;font-size:.9rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;"><i class="fa-solid fa-play" style="margin-right:4px;"></i>Start Flow</button>
+        <button onclick="resetBreathGame()" style="padding:.9rem 1.25rem;background:#fff;border:1px solid #e8dcc8;border-radius:9px;font-size:.85rem;font-weight:500;color:#5A5653;cursor:pointer;">Reset</button>
+      </div>
+      <div style="margin-top:1rem;text-align:center;font-size:.78rem;color:#9A9590;line-height:1.6;">Hold <b>↑</b> (or drag up) to inhale · <b>↓</b> (or drag down) to exhale.<br>Each pose is carried by one breath — keep it smooth for the best Flow score.</div>
+    </div>
+  </div><!-- /breath-game -->
+
+
+  <!-- ════════════ WELLNESS GUIDE ════════════ -->
+  <div id="wellness-guide" style="display:none; padding:1.5rem; max-width:980px; margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #e8dcc8;">
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <button onclick="hideGame()" style="background:none;border:none;cursor:pointer;color:#2B6B5E;padding:.5rem;border-radius:8px;display:flex;align-items:center;gap:.4rem;font-size:.85rem;"><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>
+        <div>
+          <div style="font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;">Wellness Guide</div>
+          <div style="font-size:.8rem;color:#2B6B5E;margin-top:1px;">How are you feeling today? Build a practice to meet it.</div>
+        </div>
+      </div>
+      <div style="text-align:right;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Sessions</div><div id="wellness-sessions" style="font-size:2rem;font-weight:600;color:#C8472A;line-height:1;">0</div></div>
+    </div>
+
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#C8472A;margin-bottom:.75rem;">Choose how you feel</div>
+    <div id="issue-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin-bottom:2rem;"></div>
+
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:2rem;align-items:start;">
+      <div>
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Recommended practice</div>
+        <div id="recommendations" style="display:flex;flex-direction:column;gap:.7rem;">
+          <div style="background:#fffdf3;border:1px dashed #e8dcc8;border-radius:10px;padding:1.5rem;text-align:center;color:#9A9590;font-size:.85rem;">Select a feeling above to see tailored poses &amp; breathing.</div>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+          <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#7580BE;">My sequence</div>
+          <button onclick="clearSequence()" style="background:none;border:none;cursor:pointer;color:#b8a894;font-size:.72rem;">clear</button>
+        </div>
+        <div id="my-sequence" style="background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:1rem;min-height:120px;display:flex;flex-direction:column;gap:.5rem;"></div>
+        <button id="log-session-btn" onclick="logSession()" class="eky-btn-primary" style="margin-top:1rem;width:100%;padding:.85rem;border:none;border-radius:9px;font-size:.88rem;font-weight:600;cursor:pointer;">Log this session</button>
+        <div id="wellness-note" style="margin-top:.6rem;text-align:center;font-size:.75rem;color:#9A9590;"></div>
+      </div>
+    </div>
+  </div><!-- /wellness-guide -->
+
+</div><!-- /page wrapper -->
+
+<script>
+/* ════════════ NAVIGATION ════════════ */
+var currentGame = null;
+var currentLevel = 'pose';
+var ALL_SECTIONS = ['matching-game','breath-game','wellness-guide'];
+
+function showGame(gameId) {
+  var splash = document.getElementById('eky-splash');
+  if (splash) splash.style.display = 'none';
+  ALL_SECTIONS.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  var section = document.getElementById(gameId);
+  if (section) {
+    section.style.display = 'block';
+    window.scrollTo(0,0);
+    currentGame = gameId;
+    if (gameId === 'matching-game') { initMatchingGame(); }
+    if (gameId === 'breath-game'   && !window.breathGameInitialized) initBreathGame();
+    if (gameId === 'wellness-guide'&& !window.wellnessInitialized)   initWellness();
+  }
+}
+
+/* Combined matching game — Level 1 (Pose Connection) + Level 2 (Energy Lines) */
+function initMatchingGame() {
+  window.matchGameInitialized = false;
+  initMatchGame();          // fresh Level 1 board on each entry
+  switchLevel('pose');
+}
+function switchLevel(level) {
+  currentLevel = level;
+  document.querySelectorAll('#level-tabs .level-tab').forEach(function(t){
+    t.classList.toggle('active', t.dataset.level === level);
+  });
+  var lp = document.getElementById('level-pose'),   le = document.getElementById('level-energy');
+  var sp = document.getElementById('stat-pose'),    se = document.getElementById('stat-energy');
+  var sub = document.getElementById('matching-subtitle');
+  if (level === 'pose') {
+    lp.style.display='block'; le.style.display='none';
+    sp.style.display='block'; se.style.display='none';
+    if (sub) sub.innerHTML = 'Level 1 · Match the pose to its name &amp; cue — click two, or drag one onto the other';
+    if (!window.matchGameInitialized) initMatchGame();
+  } else {
+    lp.style.display='none'; le.style.display='block';
+    sp.style.display='none'; se.style.display='block';
+    if (sub) sub.innerHTML = 'Level 2 · Click a pose, then the gift it brings — draw the energy rope between them';
+    buildEnergyRound();              // rebuild while visible so line coords are correct
+    window.energyGameInitialized = true;
+  }
+}
+function hideGame() {
+  ALL_SECTIONS.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  var splash = document.getElementById('eky-splash');
+  if (splash) splash.style.display = 'block';
+  window.scrollTo(0,0);
+  currentGame = null;
+}
+
+/* ════════════ SHARED: POSE LIBRARY ════════════ */
+/* Rich metadata reused across games. energy = the "gift" used by Energy Lines. */
+var poseLibrary = [
+  { id:1,  name:"Mountain Pose",  sanskrit:"Tadasana",              cue:"Ground through all four corners of the feet, lift through the crown", energy:"Grounding & steady posture", category:"standing" },
+  { id:2,  name:"Forward Fold",   sanskrit:"Uttanasana",            cue:"Hinge from the hips, let the head and neck release heavy",            energy:"Calms a busy mind",        category:"standing" },
+  { id:3,  name:"Downward Dog",   sanskrit:"Adho Mukha Svanasana",  cue:"Press hands & feet down, lift the sitting bones high",                 energy:"Wakes up the whole body",  category:"standing" },
+  { id:4,  name:"Plank Pose",     sanskrit:"Phalakasana",           cue:"Shoulders over wrists, one long line from heels to crown",             energy:"Builds core strength",     category:"strength" },
+  { id:5,  name:"Cobra",          sanskrit:"Bhujangasana",          cue:"Lift the chest, draw shoulders down, keep low ribs heavy",             energy:"Opens the heart",          category:"backbend" },
+  { id:6,  name:"Child's Pose",   sanskrit:"Balasana",              cue:"Big toes together, knees wide, forehead rests on the mat",             energy:"Deep rest & surrender",    category:"restorative" },
+  { id:7,  name:"Warrior II",     sanskrit:"Virabhadrasana II",     cue:"Front knee over ankle, arms reach long, gaze past the front hand",     energy:"Strength & focus",         category:"standing" },
+  { id:8,  name:"Bridge Pose",    sanskrit:"Setu Bandhasana",       cue:"Press into the feet, lift the hips, roll shoulders under",             energy:"Lifts low energy",         category:"backbend" },
+  { id:9,  name:"Cat–Cow",        sanskrit:"Marjaryasana–Bitilasana", cue:"Move spine with breath — round on exhale, open on inhale",           energy:"Frees a stiff spine",      category:"warmup" },
+  { id:10, name:"Tree Pose",      sanskrit:"Vrksasana",             cue:"Root the standing foot, sole to inner thigh or calf, grow tall",       energy:"Balance & calm focus",     category:"balance" },
+  { id:11, name:"Legs Up the Wall", sanskrit:"Viparita Karani",     cue:"Hips near the wall, legs rest up, arms soften open",                   energy:"Eases tired legs & nerves",category:"restorative" },
+  { id:12, name:"Seated Twist",   sanskrit:"Ardha Matsyendrasana",  cue:"Sit tall, inhale to lengthen, exhale to gently revolve",               energy:"Wrings out tension",       category:"seated" }
+];
+function findPose(name){ for(var i=0;i<poseLibrary.length;i++){ if(poseLibrary[i].name===name) return poseLibrary[i]; } return null; }
+
+/* ════════════ POSE MATCH (click + drag & drop) ════════════ */
+var matchScore=0, selectedImage=null, matchedPairs=0, matchTotal=6, matchSet=[];
+
+function initMatchGame() {
+  window.matchGameInitialized = true;
+  matchScore=0; matchedPairs=0; selectedImage=null;
+  var scoreEl=document.getElementById('match-score'); if(scoreEl) scoreEl.textContent='0';
+  var imgC=document.getElementById('pose-images'), txtC=document.getElementById('pose-texts');
+  if(!imgC||!txtC) return;
+  imgC.innerHTML=''; txtC.innerHTML='';
+
+  matchSet = poseLibrary.slice().sort(function(){return Math.random()-0.5;}).slice(0, matchTotal);
+
+  matchSet.slice().sort(function(){return Math.random()-0.5;}).forEach(function(pose){
+    var card=document.createElement('div');
+    card.className='match-card'; card.draggable=true;
+    card.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:14px;padding:14px;display:flex;flex-direction:column;align-items:center;text-align:center;';
+    card.innerHTML='<div style="width:100%;aspect-ratio:1;background:#faf0e6;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-person" style="font-size:2.4rem;color:#c4a876"></i></div><div style="font-size:10px;color:#a68563;font-family:monospace;letter-spacing:.06em">'+pose.sanskrit+'</div>';
+    card.dataset.id=pose.id;
+    card.onclick=function(){ selectImageCard(card, pose.id); };
+    card.addEventListener('dragstart', function(e){ selectImageCard(card,pose.id); card.classList.add('dragging'); if(e.dataTransfer){e.dataTransfer.setData('text/plain', String(pose.id)); e.dataTransfer.effectAllowed='move';} });
+    card.addEventListener('dragend', function(){ card.classList.remove('dragging'); });
+    imgC.appendChild(card);
+  });
+
+  matchSet.slice().sort(function(){return Math.random()-0.5;}).forEach(function(pose){
+    var tc=document.createElement('div');
+    tc.className='match-card';
+    tc.style.cssText='background:#fff;border:1px solid #e8dcc8;border-radius:14px;padding:14px;';
+    tc.innerHTML='<div style="font-weight:600;font-size:1rem;color:#5c3a2a">'+pose.name+'</div><div style="color:#a68563;font-size:.8rem;margin-top:2px">'+pose.sanskrit+'</div><div style="font-size:.78rem;color:#9d7f68;margin-top:.4rem;line-height:1.45">'+pose.cue+'</div>';
+    tc.dataset.id=pose.id;
+    tc.onclick=function(){ selectTextCard(tc, pose.id); };
+    tc.addEventListener('dragover', function(e){ e.preventDefault(); tc.classList.add('drop-hover'); });
+    tc.addEventListener('dragleave', function(){ tc.classList.remove('drop-hover'); });
+    tc.addEventListener('drop', function(e){ e.preventDefault(); tc.classList.remove('drop-hover');
+      var id = e.dataTransfer ? parseInt(e.dataTransfer.getData('text/plain')) : (selectedImage&&selectedImage.id);
+      if(id){ var src=document.querySelector('#pose-images .match-card[data-id="'+id+'"]'); if(src){ selectImageCard(src,id); } selectTextCard(tc, pose.id); }
+    });
+    txtC.appendChild(tc);
+  });
+
+  var st=document.getElementById('match-status'); if(st) st.textContent='Match all '+matchTotal+' poses to complete';
+}
+function selectImageCard(card,id){
+  document.querySelectorAll('#pose-images .match-card').forEach(function(c){c.classList.remove('selected');});
+  card.classList.add('selected'); selectedImage={card:card,id:id};
+}
+function selectTextCard(card,id){
+  var st=document.getElementById('match-status');
+  if(!selectedImage){ card.style.borderColor='#c4a876'; setTimeout(function(){card.style.borderColor='';},600); return; }
+  if(selectedImage.id===id){
+    selectedImage.card.classList.add('matched'); selectedImage.card.style.borderColor='#2B6B5E';
+    card.classList.add('matched'); card.style.borderColor='#2B6B5E';
+    matchScore+=10; matchedPairs++;
+    var s=document.getElementById('match-score'); if(s) s.textContent=matchScore;
+    selectedImage=null;
+    if(matchedPairs===matchTotal){ if(st) st.innerHTML='<span style="color:#2B6B5E;font-weight:600">Beautiful! All poses matched. Score: '+matchScore+'</span> &nbsp;<button onclick="switchLevel(\'energy\')" style="background:#7580BE18;color:#7580BE;border:none;border-radius:7px;padding:.35rem .7rem;font-size:.78rem;font-weight:600;cursor:pointer;">Continue to Level 2 <i class="fa-solid fa-arrow-right" style="font-size:.7rem"></i></button>'; warmConfetti(); }
+    else if(st) st.textContent=matchedPairs+'/'+matchTotal+' matched';
+  } else {
+    card.style.borderColor='#C8472A'; setTimeout(function(){card.style.borderColor='';},800);
+    selectedImage.card.classList.remove('selected'); selectedImage=null;
+    if(st) st.textContent="Try again — that one doesn't match";
+    setTimeout(function(){ if(st) st.textContent=matchedPairs+'/'+matchTotal+' matched'; },1400);
+  }
+}
+function resetMatchGame(){ window.matchGameInitialized=false; initMatchGame(); }
+
+/* ════════════ SHARED CONFETTI ════════════ */
+function warmConfetti(){
+  var colors=['#C8472A','#E8A07A','#2B6B5E','#7580BE','#F5E535','#3D3A38'];
+  for(var i=0;i<80;i++){ (function(idx){ setTimeout(function(){
+    var p=document.createElement('div');
+    p.style.cssText='position:fixed;left:'+(Math.random()*window.innerWidth)+'px;top:-20px;width:8px;height:8px;border-radius:50%;background:'+colors[Math.floor(Math.random()*colors.length)]+';z-index:9999;pointer-events:none';
+    document.body.appendChild(p);
+    p.animate([{transform:'translateY(0) rotate(0deg)',opacity:1},{transform:'translateY('+(window.innerHeight+100)+'px) rotate('+(Math.random()*180-90)+'deg)',opacity:0}],{duration:Math.random()*3000+2500,easing:'cubic-bezier(0.25,0.1,0.25,1)'}).onfinish=function(){p.remove();};
+  }, idx*3); })(i); }
+}
+
+/* ════════════ SUN SAL BREATH GAME ════════════ */
+var P1={en:"Mountain / Prayer",n:"Pranamasana",breath:"start",hip:[100,135],sh:[100,82],head:[100,52],aF:{e:[93,106],h:[103,98]},aB:{e:[91,106],h:[100,98]},lF:{k:[104,168],f:[104,205]},lB:{k:[96,168],f:[96,205]}};
+var P2={en:"Raised Arms",n:"Hasta Uttanasana",breath:"inhale",hip:[100,135],sh:[103,80],head:[107,52],aF:{e:[105,53],h:[104,24]},aB:{e:[101,53],h:[100,24]},lF:{k:[101,168],f:[100,205]},lB:{k:[99,168],f:[100,205]}};
+var P3={en:"Forward Fold",n:"Uttanasana",breath:"exhale",hip:[100,130],sh:[118,118],head:[125,134],aF:{e:[123,150],h:[120,192]},aB:{e:[120,150],h:[117,192]},lF:{k:[101,165],f:[99,205]},lB:{k:[99,165],f:[98,205]}};
+var P4={en:"Low Lunge",n:"Ashwa Sanchalanasana",breath:"inhale",hip:[92,138],sh:[92,96],head:[92,70],aF:{e:[105,158],h:[112,198]},aB:{e:[103,158],h:[110,198]},lF:{k:[126,168],f:[132,205]},lB:{k:[62,182],f:[38,205]}};
+var P5={en:"Plank",n:"Phalakasana",breath:"exhale",hip:[100,142],sh:[142,118],head:[160,110],aF:{e:[143,160],h:[146,198]},aB:{e:[140,160],h:[143,198]},lF:{k:[72,162],f:[40,188]},lB:{k:[70,164],f:[38,190]}};
+var P6={en:"Knees-Chest-Chin",n:"Ashtanga Namaskara",breath:"exhale",hip:[100,152],sh:[140,150],head:[158,146],aF:{e:[141,170],h:[144,198]},aB:{e:[139,170],h:[142,198]},lF:{k:[74,178],f:[44,196]},lB:{k:[72,180],f:[42,197]}};
+var P7={en:"Cobra",n:"Bhujangasana",breath:"inhale",hip:[88,178],sh:[122,142],head:[137,120],aF:{e:[123,172],h:[127,198]},aB:{e:[120,172],h:[124,198]},lF:{k:[62,188],f:[34,198]},lB:{k:[60,189],f:[32,199]}};
+var P8={en:"Downward Dog",n:"Adho Mukha Svanasana",breath:"exhale",hip:[82,92],sh:[120,150],head:[127,162],aF:{e:[124,172],h:[132,198]},aB:{e:[121,172],h:[129,198]},lF:{k:[58,150],f:[42,198]},lB:{k:[56,151],f:[40,199]}};
+var sunSalPoses=[P1,P2,P3,P4,P5,P6,P7,P8,
+  Object.assign({},P4,{breath:"inhale"}),
+  Object.assign({},P3,{breath:"exhale"}),
+  Object.assign({},P2,{breath:"inhale"}),
+  Object.assign({},P1,{breath:"exhale"})];
+var N_P=sunSalPoses.length;
+var bIdx=0,bProg=0,bDir=null,bRun=false,bDone=false,bStarted=false;
+var bRaf=null,bLastT=0,bSmooth=true,bTrans=0,bSmCount=0;
+var FILL=0.5, DECAY=0.8;
+
+function reqDir(){ if(bIdx>=N_P-1) return null; return sunSalPoses[bIdx+1].breath==='inhale'?'up':'down'; }
+function polar(cx,cy,r,deg){ var a=deg*Math.PI/180; return [cx+r*Math.sin(a), cy-r*Math.cos(a)]; }
+function arcPath(deg){
+  if(deg<=0.1) return '';
+  var r=228,cx=280,cy=280,f=function(p){return p[0].toFixed(2)+' '+p[1].toFixed(2);};
+  if(deg>=359.9){ var tp=polar(cx,cy,r,0),bt=polar(cx,cy,r,180); return 'M '+f(tp)+' A '+r+' '+r+' 0 1 1 '+f(bt)+' A '+r+' '+r+' 0 1 1 '+f(tp); }
+  var s=polar(cx,cy,r,0),e=polar(cx,cy,r,deg),lg=deg>180?1:0;
+  return 'M '+f(s)+' A '+r+' '+r+' 0 '+lg+' 1 '+f(e);
+}
+function eio(t){ return t*t*(3-2*t); }
+function lerpP(a,b,e){
+  var L=function(p,q){return [p[0]+(q[0]-p[0])*e, p[1]+(q[1]-p[1])*e];};
+  return {hip:L(a.hip,b.hip),sh:L(a.sh,b.sh),head:L(a.head,b.head),
+    aF:{e:L(a.aF.e,b.aF.e),h:L(a.aF.h,b.aF.h)},aB:{e:L(a.aB.e,b.aB.e),h:L(a.aB.h,b.aB.h)},
+    lF:{k:L(a.lF.k,b.lF.k),f:L(a.lF.f,b.lF.f)},lB:{k:L(a.lB.k,b.lB.k),f:L(a.lB.f,b.lB.f)}};
+}
+function drawFig(j){
+  var svg=document.getElementById('figure-svg'); if(!svg) return;
+  var seg=function(a,b){return '<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'"/>';};
+  var pl=function(){var pts=[].slice.call(arguments);return '<polyline points="'+pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ')+'"/>';};
+  svg.innerHTML='<circle class="breath-ring" cx="'+j.head[0].toFixed(1)+'" cy="'+j.head[1].toFixed(1)+'" r="0" fill="none"/>'+
+    '<g stroke="#3D3A38" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none">'+
+    pl(j.hip,j.lB.k,j.lB.f)+pl(j.sh,j.aB.e,j.aB.h)+seg(j.hip,j.sh)+pl(j.hip,j.lF.k,j.lF.f)+pl(j.sh,j.aF.e,j.aF.h)+seg(j.sh,j.head)+
+    '</g><circle cx="'+j.head[0].toFixed(1)+'" cy="'+j.head[1].toFixed(1)+'" r="13" fill="#3D3A38"/>';
+}
+function buildClockLabels(){
+  var w=document.getElementById('clock-labels'); if(!w||w.dataset.built) return;
+  for(var i=0;i<N_P-1;i++){
+    var xy=polar(280,280,240,(i+1)*30), el=document.createElement('div');
+    el.className='clock-label'; el.dataset.index=i;
+    el.style.left=(xy[0]/560*100)+'%'; el.style.top=(xy[1]/560*100)+'%';
+    el.innerHTML='<div class="lbl-num">'+(i+1)+'</div><div class="lbl-name">'+sunSalPoses[i].en+'</div>';
+    w.appendChild(el);
+  }
+  w.dataset.built='1';
+}
+function updateLabels(){
+  document.querySelectorAll('#clock-labels .clock-label').forEach(function(el){
+    var i=parseInt(el.dataset.index);
+    el.classList.toggle('done', bDone||i<bIdx);
+    el.classList.toggle('active', !bDone&&i===bIdx);
+  });
+}
+function updatePoseInfo(){
+  var cur=sunSalPoses[bIdx];
+  var cpE=document.getElementById('current-pose'),csE=document.getElementById('current-pose-sanskrit');
+  var nxE=document.getElementById('next-pose'),prE=document.getElementById('breath-prompt'),phE=document.getElementById('breath-phase');
+  if(cpE)cpE.textContent=cur.en; if(csE)csE.textContent=cur.n;
+  if(!nxE||!prE||!phE) return;
+  if(bDone){ nxE.innerHTML='<span style="color:#2B6B5E">Flow complete</span>'; prE.innerHTML='Beautiful — you breathed the whole salutation. 🙏'; phE.textContent='NAMASTE'; phE.style.color='#2B6B5E'; return; }
+  var nx=sunSalPoses[bIdx+1];
+  nxE.innerHTML=nx.en+' <span style="color:#c4a876">('+nx.n+')</span>';
+  var rd=reqDir();
+  if(!bRun){ prE.innerHTML=bStarted?'Paused — press <b>Resume</b> to continue.':'Press <b>Start Flow</b>, then hold arrow keys to breathe.'; phE.textContent='—'; phE.style.color='#a68563'; }
+  else if(rd==='up'){ prE.innerHTML='Hold <b>↑</b> — inhale into '+nx.en; phE.textContent='INHALE ↑'; phE.style.color='#C8472A'; }
+  else{ prE.innerHTML='Hold <b>↓</b> — exhale into '+nx.en; phE.textContent='EXHALE ↓'; phE.style.color='#2B6B5E'; }
+}
+function bRender(){
+  var a=sunSalPoses[bIdx], b=sunSalPoses[Math.min(bIdx+1,N_P-1)];
+  drawFig(lerpP(a,b,eio(bProg)));
+  var arc=document.getElementById('progress-arc');
+  if(arc) arc.setAttribute('d', arcPath(bDone?360:(bIdx+bProg)*30));
+}
+function commitTrans(){
+  bIdx++; bTrans++; if(bSmooth) bSmCount++; bProg=0; bSmooth=true;
+  var baE=document.getElementById('breath-accuracy'); if(baE) baE.textContent=Math.round(bSmCount/bTrans*100)+'%';
+  if(bIdx>=N_P-1){ bDone=true; bRun=false; bDir=null; var arc=document.getElementById('progress-arc'); if(arc) arc.setAttribute('d',arcPath(360)); setStartBtn('restart'); warmConfetti(); }
+  updateLabels(); updatePoseInfo();
+}
+function bLoop(t){
+  if(!bLastT) bLastT=t;
+  var dt=Math.min((t-bLastT)/1000,0.1); bLastT=t;
+  if(bRun&&!bDone){
+    var rd=reqDir();
+    if(bDir===rd&&rd){ bProg+=FILL*dt; if(bProg>=1){ bProg=1; commitTrans(); } }
+    else if(bProg>0){ if(bProg>0.04) bSmooth=false; bProg-=DECAY*dt; if(bProg<0) bProg=0; }
+  }
+  bRender(); bRaf=requestAnimationFrame(bLoop);
+}
+function setStartBtn(mode){
+  var btn=document.getElementById('start-breath-btn'); if(!btn) return;
+  if(mode==='pause'){ btn.innerHTML='<i class="fa-solid fa-pause" style="margin-right:6px"></i>Pause'; btn.onclick=pauseBreath; }
+  else if(mode==='restart'){ btn.innerHTML='<i class="fa-solid fa-rotate-right" style="margin-right:6px"></i>Flow Again'; btn.onclick=function(){ resetBreathState(); initBreathGameStart(); }; }
+  else{ btn.innerHTML='<i class="fa-solid fa-play" style="margin-right:6px"></i>'+(mode==='resume'?'Resume':'Start Flow'); btn.onclick=startBreath; }
+}
+function startBreath(){ if(bRun) return; bRun=true; bStarted=true; bLastT=0; if(!bRaf) bRaf=requestAnimationFrame(bLoop); setStartBtn('pause'); updateLabels(); updatePoseInfo(); }
+function pauseBreath(){ bRun=false; bDir=null; setStartBtn('resume'); updatePoseInfo(); }
+function resetBreathState(){ bIdx=0;bProg=0;bDir=null;bRun=false;bDone=false;bStarted=false;bSmooth=true;bTrans=0;bSmCount=0; var baE=document.getElementById('breath-accuracy'); if(baE) baE.textContent='--'; }
+function resetBreathGame(){ resetBreathState(); setStartBtn('start'); buildClockLabels(); updateLabels(); updatePoseInfo(); bRender(); }
+function initBreathGameStart(){ setStartBtn('start'); updateLabels(); updatePoseInfo(); bRender(); }
+function initBreathGame(){ buildClockLabels(); resetBreathState(); setStartBtn('start'); updateLabels(); updatePoseInfo(); bRender(); if(!bRaf) bRaf=requestAnimationFrame(bLoop); window.breathGameInitialized=true; }
+
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&currentGame){ hideGame(); return; }
+  if(currentGame!=='breath-game') return;
+  if(e.key==='ArrowUp'){ e.preventDefault(); bDir='up'; }
+  if(e.key==='ArrowDown'){ e.preventDefault(); bDir='down'; }
+});
+document.addEventListener('keyup',function(e){
+  if(currentGame!=='breath-game') return;
+  if(e.key==='ArrowUp'&&bDir==='up') bDir=null;
+  if(e.key==='ArrowDown'&&bDir==='down') bDir=null;
+});
+(function(){
+  var drag=false,sY=0;
+  document.addEventListener('pointerdown',function(e){
+    var s=document.getElementById('breath-stage');
+    if(!s||currentGame!=='breath-game'||!s.contains(e.target)) return;
+    drag=true; sY=e.clientY; bDir=null; s.focus({preventScroll:true});
+  });
+  document.addEventListener('pointermove',function(e){
+    if(!drag) return;
+    var dy=sY-e.clientY;
+    if(dy>10) bDir='up'; else if(dy<-10) bDir='down'; else bDir=null;
+  });
+  var end=function(){ if(drag){ drag=false; bDir=null; } };
+  document.addEventListener('pointerup',end);
+  document.addEventListener('pointercancel',end);
+})();
+
+/* ════════════ ENERGY LINES ════════════ */
+var enPairs=5, enSelPose=null, enLinked=0, enConnections=[];
+var enColors=['#C8472A','#E8A07A','#2B6B5E','#7580BE','#F5E535'];
+
+window.addEventListener('resize', redrawEnergyLines);
+function buildEnergyRound(){
+  enSelPose=null; enLinked=0; enConnections=[];
+  var set = poseLibrary.slice().sort(function(){return Math.random()-0.5;}).slice(0, enPairs);
+  var posesC=document.getElementById('energy-poses'), conceptsC=document.getElementById('energy-concepts');
+  var svg=document.getElementById('energy-svg');
+  if(!posesC||!conceptsC||!svg) return;
+  posesC.innerHTML=''; conceptsC.innerHTML=''; svg.innerHTML='';
+  document.getElementById('energy-progress').textContent='0/'+enPairs;
+  document.getElementById('energy-status').textContent='';
+
+  set.forEach(function(pose){
+    var c=document.createElement('div');
+    c.className='energy-card'; c.dataset.id=pose.id;
+    c.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:12px;padding:.85rem 1rem;display:flex;align-items:center;gap:.75rem;';
+    c.innerHTML='<div style="width:2.2rem;height:2.2rem;flex-shrink:0;background:#faf0e6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#c4a876"><i class="fa-solid fa-person"></i></div><div><div style="font-weight:600;font-size:.92rem;color:#3D3A38">'+pose.name+'</div><div style="font-size:.72rem;color:#a68563;font-family:monospace">'+pose.sanskrit+'</div></div>';
+    c.onclick=function(){ selectEnergyPose(c, pose.id); };
+    posesC.appendChild(c);
+  });
+
+  set.slice().sort(function(){return Math.random()-0.5;}).forEach(function(pose){
+    var c=document.createElement('div');
+    c.className='energy-card'; c.dataset.id=pose.id;
+    c.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:12px;padding:.95rem 1rem;display:flex;align-items:center;min-height:3.7rem;';
+    c.innerHTML='<div style="font-weight:500;font-size:.9rem;color:#5A5653">'+pose.energy+'</div>';
+    c.onclick=function(){ selectEnergyConcept(c, pose.id); };
+    conceptsC.appendChild(c);
+  });
+}
+function selectEnergyPose(card,id){
+  if(card.classList.contains('linked')) return;
+  document.querySelectorAll('#energy-poses .energy-card').forEach(function(c){c.classList.remove('selected');});
+  card.classList.add('selected'); enSelPose={card:card,id:id};
+}
+function selectEnergyConcept(card,id){
+  if(card.classList.contains('linked')) return;
+  var status=document.getElementById('energy-status');
+  if(!enSelPose){ card.style.borderColor='#c4a876'; setTimeout(function(){ if(!card.classList.contains('linked')) card.style.borderColor=''; },600); return; }
+  if(enSelPose.id===id){
+    var color=enColors[enLinked%enColors.length];
+    enSelPose.card.classList.remove('selected');
+    enSelPose.card.classList.add('linked'); card.classList.add('linked');
+    enConnections.push({a:enSelPose.card, b:card, color:color});
+    drawEnergyLine(enSelPose.card, card, color, true);
+    enSelPose=null; enLinked++;
+    document.getElementById('energy-progress').textContent=enLinked+'/'+enPairs;
+    if(enLinked===enPairs){ if(status) status.innerHTML='<span style="color:#2B6B5E;font-weight:600">All energy lines connected — beautiful!</span>'; warmConfetti(); }
+  } else {
+    var orig=card.style.borderColor;
+    card.style.borderColor='#C8472A'; setTimeout(function(){ if(!card.classList.contains('linked')) card.style.borderColor=orig||''; },700);
+    if(enSelPose){ enSelPose.card.classList.remove('selected'); enSelPose=null; }
+    if(status){ status.textContent='Not quite — try another pairing'; setTimeout(function(){ status.textContent=''; },1400); }
+  }
+}
+function lineCenter(el, container, side){
+  var r=el.getBoundingClientRect(), cr=container.getBoundingClientRect();
+  return { x:(side==='right'? r.right : r.left)-cr.left, y:r.top-cr.top + r.height/2 };
+}
+function drawEnergyLine(aEl,bEl,color,animate){
+  var board=document.getElementById('energy-board'), svg=document.getElementById('energy-svg');
+  if(!board||!svg) return;
+  var p1=lineCenter(aEl,board,'right'), p2=lineCenter(bEl,board,'left');
+  var midx=(p1.x+p2.x)/2;
+  var d='M '+p1.x+' '+p1.y+' C '+midx+' '+p1.y+', '+midx+' '+p2.y+', '+p2.x+' '+p2.y;
+  var path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',d); path.setAttribute('fill','none');
+  path.setAttribute('stroke',color); path.setAttribute('stroke-width','4');
+  path.setAttribute('stroke-linecap','round'); path.setAttribute('opacity','0.85');
+  svg.appendChild(path);
+  if(animate){
+    var len=path.getTotalLength();
+    path.style.strokeDasharray=len; path.style.strokeDashoffset=len;
+    path.animate([{strokeDashoffset:len},{strokeDashoffset:0}],{duration:550,easing:'cubic-bezier(0.4,0,0.2,1)',fill:'forwards'});
+  }
+  // endpoint dots
+  [p1,p2].forEach(function(pt){
+    var dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx',pt.x); dot.setAttribute('cy',pt.y); dot.setAttribute('r','5'); dot.setAttribute('fill',color);
+    svg.appendChild(dot);
+  });
+}
+function redrawEnergyLines(){
+  if(currentGame!=='matching-game' || currentLevel!=='energy') return;
+  var svg=document.getElementById('energy-svg'); if(!svg) return;
+  svg.innerHTML='';
+  enConnections.forEach(function(c){ drawEnergyLine(c.a,c.b,c.color,false); });
+}
+function resetEnergyGame(){ buildEnergyRound(); }
+
+/* ════════════ WELLNESS GUIDE ════════════ */
+var SEQ_KEY='eky_sequence', SESS_KEY='eky_sessions';
+var mySequence=[], activeIssue=null;
+
+var wellnessIssues=[
+  { id:'anxiety', label:'Anxious / Stressed', icon:'fa-cloud', color:'#7580BE',
+    asanas:["Child's Pose","Forward Fold","Mountain Pose","Legs Up the Wall"],
+    breath:[{name:'Extended Exhale (1:2)',desc:'Inhale 4, exhale 8 — lengthening the exhale calms the nervous system.'},{name:'Alternate Nostril',desc:'Nadi Shodhana balances and settles a racing mind.'}] },
+  { id:'energy', label:'Low Energy', icon:'fa-battery-quarter', color:'#C8472A',
+    asanas:["Cobra","Bridge Pose","Downward Dog","Warrior II"],
+    breath:[{name:'Breath of Joy',desc:'Three-part inhale with arm sweeps to wake the body up.'},{name:'Kapalabhati (gentle)',desc:'Short, light belly pumps to invigorate — keep it easy.'}] },
+  { id:'stiff', label:'Stiff / Achy', icon:'fa-person-walking', color:'#2B6B5E',
+    asanas:["Cat–Cow","Seated Twist","Low Lunge","Mountain Pose"],
+    breath:[{name:'Breath with Movement',desc:'Match slow inhales and exhales to each joint movement.'}] },
+  { id:'breath', label:'Short of Breath', icon:'fa-lungs', color:'#E8A07A',
+    asanas:["Cobra","Bridge Pose","Seated Twist"],
+    breath:[{name:'Diaphragmatic Breath',desc:'Hand on belly, breathe low and full into the diaphragm.'},{name:'Pursed-Lip Breath',desc:'Inhale through the nose, exhale slowly through pursed lips.'}] },
+  { id:'sleep', label:'Restless / Sleep', icon:'fa-moon', color:'#7580BE',
+    asanas:["Legs Up the Wall","Child's Pose","Forward Fold"],
+    breath:[{name:'4-7-8 Breath',desc:'Inhale 4, hold 7, exhale 8 — a natural tranquilizer for sleep.'}] },
+  { id:'focus', label:'Scattered / Unfocused', icon:'fa-bullseye', color:'#C8472A',
+    asanas:["Tree Pose","Mountain Pose","Warrior II","Downward Dog"],
+    breath:[{name:'Box Breath',desc:'Inhale 4, hold 4, exhale 4, hold 4 — steadies attention.'},{name:'Alternate Nostril',desc:'Balances both hemispheres for clear, even focus.'}] }
+];
+
+function storeGet(key,fallback){ try{ var v=localStorage.getItem(key); return v?JSON.parse(v):fallback; }catch(e){ return fallback; } }
+function storeSet(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+
+function initWellness(){
+  window.wellnessInitialized=true;
+  mySequence = storeGet(SEQ_KEY, []);
+  var grid=document.getElementById('issue-grid'); if(!grid) return;
+  grid.innerHTML='';
+  wellnessIssues.forEach(function(iss){
+    var c=document.createElement('div');
+    c.className='issue-card'; c.dataset.id=iss.id;
+    c.style.cssText='background:#fff;border:1.5px solid #e8dcc8;border-radius:10px;padding:1rem .85rem;text-align:center;';
+    c.innerHTML='<div style="width:2.4rem;height:2.4rem;margin:0 auto .5rem;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:'+iss.color+'22;color:'+iss.color+'"><i class="fa-solid '+iss.icon+'"></i></div><div style="font-size:.82rem;font-weight:600;color:#3D3A38;line-height:1.25">'+iss.label+'</div>';
+    c.onclick=function(){ selectIssue(iss.id); };
+    grid.appendChild(c);
+  });
+  renderSequence();
+  updateSessionCount();
+}
+function selectIssue(id){
+  activeIssue=id;
+  document.querySelectorAll('#issue-grid .issue-card').forEach(function(c){ c.classList.toggle('active', c.dataset.id===id); });
+  var iss=null; wellnessIssues.forEach(function(w){ if(w.id===id) iss=w; });
+  var rec=document.getElementById('recommendations'); if(!rec||!iss) return;
+  var html='';
+  html+='<div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:#2B6B5E;margin:.2rem 0 .1rem;">Poses</div>';
+  iss.asanas.forEach(function(name){
+    var p=findPose(name); var cue=p?p.cue:'';
+    var label=name+(p?(' · '+p.sanskrit):'');
+    html+=recRow('asana', name, label, cue, '#2B6B5E');
+  });
+  html+='<div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:#C8472A;margin:.6rem 0 .1rem;">Breathing (Pranayama)</div>';
+  iss.breath.forEach(function(b){ html+=recRow('breath', b.name, b.name, b.desc, '#C8472A'); });
+  rec.innerHTML=html;
+}
+function recRow(type, name, label, desc, color){
+  var safeName=name.replace(/'/g,"\\'");
+  return '<div style="background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:.8rem .9rem;display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;">'+
+    '<div><div style="font-weight:600;font-size:.9rem;color:#3D3A38">'+label+'</div>'+(desc?'<div style="font-size:.78rem;color:#9d7f68;margin-top:.25rem;line-height:1.45">'+desc+'</div>':'')+'</div>'+
+    '<button class="rec-add" onclick="addToSequence(\''+type+'\',\''+safeName+'\')" style="flex-shrink:0;background:'+color+'18;color:'+color+';border:none;border-radius:7px;padding:.4rem .6rem;font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-plus" style="margin-right:3px"></i>Add</button>'+
+  '</div>';
+}
+function addToSequence(type,name){
+  mySequence.push({type:type,name:name});
+  storeSet(SEQ_KEY, mySequence);
+  renderSequence();
+}
+function removeFromSequence(idx){
+  mySequence.splice(idx,1); storeSet(SEQ_KEY,mySequence); renderSequence();
+}
+function clearSequence(){ mySequence=[]; storeSet(SEQ_KEY,mySequence); renderSequence(); }
+function renderSequence(){
+  var box=document.getElementById('my-sequence'); if(!box) return;
+  if(mySequence.length===0){ box.innerHTML='<div style="color:#b8a894;font-size:.82rem;text-align:center;padding:1.5rem .5rem;">Add poses &amp; breathing from the left to build your practice.</div>'; return; }
+  box.innerHTML='';
+  mySequence.forEach(function(item,idx){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:#faf6f1;border-radius:7px;padding:.45rem .6rem;';
+    var icon = item.type==='breath' ? 'fa-wind' : 'fa-person';
+    var col  = item.type==='breath' ? '#C8472A' : '#2B6B5E';
+    row.innerHTML='<div style="display:flex;align-items:center;gap:.5rem;min-width:0;"><span style="color:'+col+';font-size:.8rem;width:1rem;text-align:center"><i class="fa-solid '+icon+'"></i></span><span style="font-size:.84rem;color:#3D3A38;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+item.name+'</span></div><button onclick="removeFromSequence('+idx+')" style="background:none;border:none;cursor:pointer;color:#c4b8a8;font-size:.8rem;flex-shrink:0;"><i class="fa-solid fa-xmark"></i></button>';
+    box.appendChild(row);
+  });
+}
+function logSession(){
+  var note=document.getElementById('wellness-note');
+  if(mySequence.length===0){ if(note){ note.textContent='Add a pose or two first, then log your session.'; } return; }
+  var sessions=storeGet(SESS_KEY, []);
+  sessions.push({ date:new Date().toISOString(), count:mySequence.length, items:mySequence.slice() });
+  storeSet(SESS_KEY, sessions);
+  updateSessionCount();
+  warmConfetti();
+  if(note){ note.innerHTML='<span style="color:#2B6B5E">Session logged — '+mySequence.length+' practices. Well done. 🙏</span>'; }
+}
+function updateSessionCount(){
+  var sessions=storeGet(SESS_KEY, []);
+  var el=document.getElementById('wellness-sessions'); if(el) el.textContent=sessions.length;
+}
+
+console.log('%c[EKY Yoga Games] All four modes loaded.', 'color:#2B6B5E');
+</script>
 </body>
 </html>
