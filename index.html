@@ -663,12 +663,14 @@ function drawFig(j){
 }
 function buildClockLabels(){
   var w=document.getElementById('clock-labels'); if(!w||w.dataset.built) return;
-  /* 12 labels at the 12 clock points: pose 1 at 12 o'clock (0°), pose 12 at 11 o'clock (330°) */
-  for(var i=0;i<N_P;i++){
-    var xy=polar(280,280,242,i*30), el=document.createElement('div');
+  /* Step 1 (Mountain/Prayer) and step 12 (same pose) share one point at the top.
+     The remaining 10 unique poses (steps 2-11) are spaced evenly around the rest of the circle. */
+  var uniqueCount=N_P-1;
+  for(var i=0;i<uniqueCount;i++){
+    var xy=polar(280,280,242,i*(360/uniqueCount)), el=document.createElement('div');
     el.className='clock-label'; el.dataset.index=i;
     el.style.left=(xy[0]/560*100)+'%'; el.style.top=(xy[1]/560*100)+'%';
-    el.innerHTML='<div class="lbl-num">'+(i+1)+'</div><div class="lbl-name">'+sunSalPoses[i].en+'</div>';
+    el.innerHTML='<div class="lbl-num">'+(i===0?1:i+1)+'</div><div class="lbl-name">'+sunSalPoses[i].en+'</div>';
     w.appendChild(el);
   }
   w.dataset.built='1';
@@ -676,8 +678,13 @@ function buildClockLabels(){
 function updateLabels(){
   document.querySelectorAll('#clock-labels .clock-label').forEach(function(el){
     var i=parseInt(el.dataset.index);
-    el.classList.toggle('done', bDone||i<bIdx);
-    el.classList.toggle('active', !bDone&&i===bIdx);
+    if(i===0){
+      el.classList.toggle('active', bDone||bIdx===0);
+      el.classList.toggle('done', bIdx>0&&!bDone);
+    } else {
+      el.classList.toggle('done', bDone||i<bIdx);
+      el.classList.toggle('active', !bDone&&i===bIdx);
+    }
   });
 }
 function updatePoseInfo(){
