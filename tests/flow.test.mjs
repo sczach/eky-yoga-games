@@ -78,16 +78,17 @@ await page.evaluate(() => restartCleanFlow());
 let clean = await page.evaluate(() => sunFlow.N);
 ok(clean === 12, 'Restart clean returns to base 12-pose salutation');
 
-/* ---------- WELLNESS: mixed asana + breath ---------- */
+/* ---------- WELLNESS: mixed asana + breath (vinyasa order + split breath) ---------- */
 await page.evaluate(() => {
   showGame('wellness-guide');
+  // Deliberately scrambled click-order: standing, breath, balance, warmup, breath, restorative
   mySequence = [
-    { type:'asana', name:'Warrior II' },
-    { type:'breath', name:'Box Breath' },
-    { type:'asana', name:'Tree Pose' },
-    { type:'asana', name:'Downward Dog' },
-    { type:'breath', name:'4-7-8 Breath' },
-    { type:'asana', name:"Child's Pose" }
+    { type:'asana', name:'Warrior II' },     // standing (rank 1)
+    { type:'breath', name:'Box Breath' },    // pranayama
+    { type:'asana', name:'Tree Pose' },      // balance  (rank 2)
+    { type:'asana', name:'Downward Dog' },   // warmup   (rank 0)
+    { type:'breath', name:'4-7-8 Breath' },  // pranayama
+    { type:'asana', name:"Child's Pose" }    // restorative (rank 9)
   ];
   animateSequence();
 });
@@ -97,32 +98,98 @@ let w = await page.evaluate(() => ({
   linear: wellnessFlow.linear,
   labels: document.querySelectorAll('#wf-labels .clock-label').length,
   pauses: wellnessFlow.poses.filter(p => p.pause).length,
+  names: wellnessFlow.poses.map(p => p.en),
   overlay: getComputedStyle(document.getElementById('wellness-flow-overlay')).display
 }));
 console.log('Wellness mixed:', JSON.stringify(w));
 ok(w.overlay === 'block', 'Wellness animate overlay opens');
-ok(w.N === 6, 'Wellness flow has one station per sequence item (6)');
-ok(w.unique === 6 && !w.loop, 'Open sequence: unique stations = N (no shared top)');
-ok(w.labels === 6, 'Wellness renders a label per station');
-ok(w.pauses === 2, 'Breath items rendered as pause stations (2), not fed to lerpP');
+ok(w.N === 4, 'Breath items split out — only the 4 asanas become pose stations');
+ok(w.unique === 4 && !w.loop, 'Open sequence: unique stations = N (no shared top)');
+ok(w.labels === 4, 'Wellness renders a label per asana station');
+ok(w.pauses === 0, 'No pause stations — pranayama is no longer woven into the pose loop');
 ok(w.linear === false, 'N>2 uses circular layout');
+// vinyasa krama: warmup → standing → balance → restorative, regardless of click order
+ok(JSON.stringify(w.names) === JSON.stringify(['Downward Dog','Warrior II','Tree Pose',"Child's Pose"]),
+   'Asanas reordered into vinyasa best-practice sequence, not click order');
 
-// verify arriving at a breathing pause produces NO figure movement
-// (pause rig == previous asana rig, so the asana->pause transition is static)
-let hold = await page.evaluate(() => {
-  function fig(i, pr){ wellnessFlow.idx=i; wellnessFlow.prog=pr; wellnessFlow.render(); return document.getElementById('wf-figure').innerHTML; }
-  const atAsana = fig(0, 0);   // holding Warrior II
-  const atPause = fig(0, 1);   // breathed onto the pause station (idx 0 -> 1)
-  const mid     = fig(0, 0.5); // mid-transition into the pause
-  wellnessFlow.idx=0; wellnessFlow.prog=0;
-  return atAsana === atPause && atAsana === mid;
+/* breath-wave panel: separate, passive pranayama display */
+let bw = await page.evaluate(() => ({
+  panel: getComputedStyle(document.getElementById('wf-breath-panel')).display,
+  items: wellnessBreath.items.slice(),
+  track: document.getElementById('wf-breath-track').getAttribute('d') || '',
+  hasDot: !!document.getElementById('wf-breath-dot'),
+  chips: document.getElementById('wf-breath-chips').children.length,
+  title: document.getElementById('wf-breath-title').textContent
+}));
+console.log('Breath wave:', JSON.stringify({ ...bw, track: bw.track.slice(0,24)+'…' }));
+ok(bw.panel === 'block', 'Pranayama breath-wave panel shows beside the pose circle');
+ok(bw.items.length === 2, 'Both distinct breath practices captured into the breath display');
+ok(bw.track.length > 10 && /^M /.test(bw.track), 'Breath-wave line path is drawn for the active pattern');
+ok(bw.hasDot, 'A traveling dot element exists on the breath wave');
+ok(bw.chips === 2, 'A selector chip is shown per breath pattern');
+
+// line shape differs per pattern ratio (Box 4:4:4:4 vs 4-7-8 4:7:8:0)
+let shapes = await page.evaluate(() => {
+  const a = (wellnessBreath.select(0), document.getElementById('wf-breath-track').getAttribute('d'));
+  const b = (wellnessBreath.select(1), document.getElementById('wf-breath-track').getAttribute('d'));
+  wellnessBreath.select(0);
+  return { a, b };
 });
-ok(hold === true, 'Figure holds still arriving at a breathing pause (not interpolated)');
+ok(shapes.a !== shapes.b, 'Line shape varies with the breath pattern ratio');
+
+// passive: the dot animates on its own rAF, NOT from arrow keys / activeFlow
+let passive = await page.evaluate(async () => {
+  wellnessBreath.start();
+  const running = wellnessBreath.running;
+  const dot0 = document.getElementById('wf-breath-dot').getAttribute('cx');
+  // arrow keys drive the pose flow, not the breath wave
+  const beforeFlowProg = activeFlow ? activeFlow.prog : null;
+  document.dispatchEvent(new KeyboardEvent('keydown', { key:'ArrowUp' }));
+  await new Promise(r => setTimeout(r, 120));
+  document.dispatchEvent(new KeyboardEvent('keyup', { key:'ArrowUp' }));
+  const dot1 = document.getElementById('wf-breath-dot').getAttribute('cx');
+  wellnessBreath.pause();
+  const pausedRunning = wellnessBreath.running;
+  return { running, moved: dot0 !== dot1, pausedRunning };
+});
+ok(passive.running === true, 'Breathe button starts an auto-looping animation');
+ok(passive.moved === true, 'Dot travels along the path on its own (passive loop)');
+ok(passive.pausedRunning === false, 'Breath wave can be paused independently of the pose flow');
 
 let dw = await runToDone('wellnessFlow');
 console.log('Wellness run:', JSON.stringify(dw));
 ok(dw.done === true, 'Wellness sequence reaches done end-to-end');
 await page.screenshot({ path: SHOT + '/shot-wellness-animated.png' });
+
+/* ---------- vinyasa ordering: counter-pose (twist follows backbend) ---------- */
+let order2 = await page.evaluate(() => {
+  closeWellnessFlow();
+  mySequence = [ { type:'asana', name:'Supine Twist' }, { type:'asana', name:'Cobra' } ];
+  animateSequence();
+  return wellnessFlow.poses.map(p => p.en);
+});
+console.log('Counter-pose order:', JSON.stringify(order2));
+ok(JSON.stringify(order2) === JSON.stringify(['Cobra','Supine Twist']),
+   'Backbend sequenced before its twist counter-pose, regardless of click order');
+await page.evaluate(() => closeWellnessFlow());
+
+/* ---------- breath-only sequence: pose stage hidden, breath panel alone ---------- */
+let bonly = await page.evaluate(() => {
+  mySequence = [ { type:'breath', name:'Kapalabhati (gentle)' } ];
+  animateSequence();
+  return {
+    overlay: getComputedStyle(document.getElementById('wellness-flow-overlay')).display,
+    stage: getComputedStyle(document.getElementById('wf-stage-wrap')).display,
+    panel: getComputedStyle(document.getElementById('wf-breath-panel')).display,
+    active: activeFlow,
+    items: wellnessBreath.items.slice()
+  };
+});
+console.log('Breath-only:', JSON.stringify(bonly));
+ok(bonly.overlay === 'block' && bonly.panel === 'block', 'Breath-only sequence still opens with the breath panel');
+ok(bonly.stage === 'none' && bonly.active === null, 'No asanas → pose stage hidden and no active key-driven flow');
+await page.screenshot({ path: SHOT + '/shot-breath-only.png' });
+await page.evaluate(() => closeWellnessFlow());
 
 /* ---------- WELLNESS: short (linear) ---------- */
 await page.evaluate(() => { closeWellnessFlow(); });

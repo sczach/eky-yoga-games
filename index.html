@@ -911,7 +911,7 @@ function buildExtendedSunSal(ids){
 }
 
 /* ════════════ SUN SAL — wiring ════════════ */
-var sunFlow=null, wellnessFlow=null, activeFlow=null;
+var sunFlow=null, wellnessFlow=null, activeFlow=null, wellnessBreath=null;
 var sunVariationSel=[];
 
 function initBreathGame(){
@@ -967,43 +967,192 @@ function restartCleanFlow(){
 }
 
 /* ════════════ WELLNESS — "Animate my Sequence" ════════════ */
+
+/* Vinyasa krama ordering: regardless of the order poses were clicked in, a sound
+   practice arcs centering → standing → balance → core → backbends → (twist as the
+   backbend counter) → hip openers → seated/forward folds → inversions → rest.
+   We rank each asana by its library `category` and stable-sort, so the user's
+   relative order is preserved only within a category. */
+var VINYASA_ORDER={ warmup:0, standing:1, balance:2, core:3, backbend:4, twist:5, hip:6, seated:7, inversion:8, restorative:9 };
+function vinyasaRank(name){
+  var p=findPose(name); var c=(p&&p.category)?p.category:'standing';
+  var r=VINYASA_ORDER[c]; return (r==null)?VINYASA_ORDER.standing:r;
+}
+function sequenceAsanas(items){
+  return items.map(function(it,i){ return { it:it, i:i, r:vinyasaRank(it.name) }; })
+    .sort(function(a,b){ return (a.r-b.r) || (a.i-b.i); })
+    .map(function(x){ return x.it; });
+}
+
+/* Pranayama is no longer woven into the pose loop — breath items are split out
+   into their own passive breath-wave display (see BreathWave). Stations are
+   asanas only, reordered into a best-practice sequence. */
 function buildWellnessStations(){
-  var stations=[], lastRig=null;
-  mySequence.forEach(function(item){
-    if(item.type==='asana'){
-      var pose=findPose(item.name); if(!pose) return;
-      var rig=rigFromPoseArt(pose.id); rig.en=pose.name; rig.n=pose.sanskrit;
-      rig.breath = (stations.length%2===0)?'inhale':'exhale';
-      stations.push(rig); lastRig=rig;
-    } else {
-      /* pranayama: a breathing-pause station — figure holds the previous pose
-         (rig copied from it) so lerpP produces no movement through the pause. */
-      var base=lastRig?cloneRig(lastRig):rigFromPoseArt(1);
-      base.pause=true; base.en=item.name; base.n='Pranayama';
-      base.breath=(stations.length%2===0)?'inhale':'exhale';
-      stations.push(base);
-    }
+  var asanas=mySequence.filter(function(it){ return it.type==='asana'; });
+  asanas=sequenceAsanas(asanas);
+  var stations=[];
+  asanas.forEach(function(item){
+    var pose=findPose(item.name); if(!pose) return;
+    var rig=rigFromPoseArt(pose.id); rig.en=pose.name; rig.n=pose.sanskrit;
+    rig.breath=(stations.length%2===0)?'inhale':'exhale';
+    stations.push(rig);
   });
   return stations;
 }
+
+/* Distinct breath practices in the sequence, in the order first added. */
+function collectBreaths(){
+  var seen={}, out=[];
+  mySequence.forEach(function(it){
+    if(it.type==='breath' && !seen[it.name]){ seen[it.name]=1; out.push(it.name); }
+  });
+  return out;
+}
+
+/* ════════════ PRANAYAMA — passive breath-wave display ════════════ */
+/* Phases are [inhale, hold-in, exhale, hold-out] in seconds. The line rises on
+   the inhale, holds flat at the top, falls on the exhale, holds flat at the
+   bottom — so the shape varies with each pattern's ratio. A dot rides the path
+   in real time and loops. This is passive: it runs on its own rAF loop and never
+   reads the arrow keys / activeFlow that drive the pose flow. */
+var BREATH_PATTERNS={
+  'Box Breath':[4,4,4,4],
+  '4-7-8 Breath':[4,7,8,0],
+  'Extended Exhale (1:2)':[4,0,8,0],
+  'Alternate Nostril':[4,2,4,0],
+  'Breath of Joy':[3,1,2,0],
+  'Kapalabhati (gentle)':[1.6,0,0.5,0],
+  'Breath with Movement':[4,0,4,0],
+  'Diaphragmatic Breath':[4,0,6,0],
+  'Pursed-Lip Breath':[2,0,4,0]
+};
+function breathPhases(name){ return BREATH_PATTERNS[name] || [4,0,4,0]; }
+var PHASE_COLOR={ Inhale:'#C8472A', Exhale:'#2B6B5E', Hold:'#7580BE' };
+
+function BreathWave(){
+  this.items=[]; this.cur=0;
+  this.raf=null; this.running=false; this.t0=0; this.pausedAt=0;
+  this.CYCLES=2;
+  this.W=320; this.H=150; this.padL=16; this.padR=16; this.padT=22; this.padB=26;
+}
+BreathWave.prototype.phases=function(){ return breathPhases(this.items[this.cur]); };
+BreathWave.prototype.cycleTime=function(){ var p=this.phases(); return p[0]+p[1]+p[2]+p[3]; };
+BreathWave.prototype.profileY=function(t){
+  var p=this.phases(), inh=p[0],hi=p[1],ex=p[2];
+  if(t<inh) return inh? t/inh : 1;
+  t-=inh; if(t<hi) return 1;
+  t-=hi; if(t<ex) return ex? 1-t/ex : 0;
+  return 0;
+};
+BreathWave.prototype.phaseName=function(t){
+  var p=this.phases(), inh=p[0],hi=p[1],ex=p[2];
+  if(t<inh) return 'Inhale';
+  t-=inh; if(t<hi) return 'Hold';
+  t-=hi; if(t<ex) return 'Exhale';
+  return 'Hold';
+};
+BreathWave.prototype.xAt=function(frac){ return this.padL + frac*(this.W-this.padL-this.padR); };
+BreathWave.prototype.yAt=function(yNorm){ var top=this.padT, bot=this.H-this.padB; return bot - yNorm*(bot-top); };
+BreathWave.prototype.buildTrack=function(){
+  var p=this.phases(), T=this.cycleTime(), total=T*this.CYCLES, self=this;
+  var verts=[], c, base;
+  for(c=0;c<this.CYCLES;c++){
+    base=c*T;
+    verts.push([base,0]); verts.push([base+p[0],1]);
+    verts.push([base+p[0]+p[1],1]); verts.push([base+p[0]+p[1]+p[2],0]);
+  }
+  verts.push([total,0]);
+  var pts=verts.map(function(v){ return [self.xAt(v[0]/total), self.yAt(v[1])]; });
+  var d=pts.map(function(pt,i){ return (i?'L':'M')+' '+pt[0].toFixed(1)+' '+pt[1].toFixed(1); }).join(' ');
+  var track=gid('wf-breath-track'); if(track) track.setAttribute('d',d);
+  var area=gid('wf-breath-area');
+  if(area){
+    var bot=this.yAt(0), x0=this.xAt(0), x1=this.xAt(1);
+    area.setAttribute('d', d+' L '+x1.toFixed(1)+' '+bot.toFixed(1)+' L '+x0.toFixed(1)+' '+bot.toFixed(1)+' Z');
+  }
+};
+BreathWave.prototype.placeDot=function(elapsedSec){
+  var T=this.cycleTime(), total=T*this.CYCLES;
+  var g=((elapsedSec%total)+total)%total;
+  var tc=g%T;
+  var x=this.xAt(g/total), y=this.yAt(this.profileY(tc));
+  var dot=gid('wf-breath-dot');
+  var ph=this.phaseName(tc), col=PHASE_COLOR[ph]||'#2B6B5E';
+  if(dot){ dot.setAttribute('cx',x.toFixed(1)); dot.setAttribute('cy',y.toFixed(1)); dot.setAttribute('fill',col); }
+  var pl=gid('wf-breath-phase'); if(pl){ pl.textContent=this.running?ph:'Press Breathe to begin'; pl.style.color=this.running?col:'#9A9590'; }
+};
+BreathWave.prototype.setItems=function(names){
+  this.stop(); this.items=names||[]; this.cur=0;
+  this.buildChips(); this.select(0);
+};
+BreathWave.prototype.buildChips=function(){
+  var box=gid('wf-breath-chips'); if(!box) return;
+  box.innerHTML=''; box.style.display = this.items.length>1 ? 'flex' : 'none';
+  var self=this;
+  this.items.forEach(function(name,i){
+    var on=i===self.cur;
+    var b=document.createElement('button'); b.type='button';
+    b.style.cssText='border:1.5px solid '+(on?'#C8472A':'#e8dcc8')+';background:'+(on?'#fdeee9':'#fff')+';color:'+(on?'#C8472A':'#5A5653')+';border-radius:999px;padding:.35rem .7rem;font-size:.72rem;font-weight:500;cursor:pointer;';
+    b.textContent=name;
+    b.onclick=function(){ self.select(i); self.buildChips(); };
+    box.appendChild(b);
+  });
+};
+BreathWave.prototype.select=function(i){
+  this.cur=Math.max(0,Math.min(i,this.items.length-1));
+  var name=this.items[this.cur]||'';
+  var t=gid('wf-breath-title'); if(t) t.textContent=name;
+  var r=gid('wf-breath-ratio');
+  if(r){ var p=this.phases(); r.textContent=p.join(' : ')+'  ·  inhale : hold : exhale : hold'; }
+  this.buildTrack();
+  this.t0=performance.now(); this.pausedAt=0;
+  this.placeDot(0);
+};
+BreathWave.prototype.setBtn=function(running){
+  var b=gid('wf-breath-btn'); if(!b) return;
+  b.innerHTML = running
+    ? '<i class="fa-solid fa-pause" style="margin-right:5px"></i>Pause'
+    : '<i class="fa-solid fa-wind" style="margin-right:5px"></i>Breathe';
+};
+BreathWave.prototype.tick=function(now){
+  this.placeDot((now-this.t0)/1000);
+  if(this.running){ var self=this; this.raf=requestAnimationFrame(function(t){ self.tick(t); }); }
+};
+BreathWave.prototype.start=function(){
+  if(this.running || !this.items.length) return;
+  this.running=true; this.t0=performance.now()-this.pausedAt; this.setBtn(true);
+  var self=this; this.raf=requestAnimationFrame(function(t){ self.tick(t); });
+};
+BreathWave.prototype.pause=function(){
+  if(!this.running) return;
+  this.running=false; this.pausedAt=performance.now()-this.t0;
+  if(this.raf){ cancelAnimationFrame(this.raf); this.raf=null; }
+  this.setBtn(false); this.placeDot(this.pausedAt/1000);
+};
+BreathWave.prototype.toggle=function(){ if(this.running) this.pause(); else this.start(); };
+BreathWave.prototype.stop=function(){
+  this.running=false; this.pausedAt=0; this.t0=0;
+  if(this.raf){ cancelAnimationFrame(this.raf); this.raf=null; }
+  this.setBtn(false);
+};
 function ensureWellnessStage(){
   if(gid('wellness-flow-overlay')) return;
   var ov=document.createElement('div');
   ov.id='wellness-flow-overlay';
   ov.style.cssText='position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#fdfcf5 0%,#fef9df 100%);overflow:auto;display:none;';
   ov.innerHTML=''+
-  '<div style="max-width:980px;margin:0 auto;padding:1.5rem;">'+
+  '<div style="max-width:1180px;margin:0 auto;padding:1.5rem;">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid #e8dcc8;">'+
       '<div style="display:flex;align-items:center;gap:1rem;">'+
         '<button onclick="closeWellnessFlow()" style="background:none;border:none;cursor:pointer;color:#2B6B5E;padding:.5rem;border-radius:8px;display:flex;align-items:center;gap:.4rem;font-size:.85rem;"><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>'+
         '<div><div style="font-family:\'Lora\',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;">Animate My Sequence</div>'+
-        '<div style="font-size:.8rem;color:#2B6B5E;margin-top:1px;">Hold ↑ to inhale · Hold ↓ to exhale · breathe through your practice</div></div>'+
+        '<div style="font-size:.8rem;color:#2B6B5E;margin-top:1px;">Poses ordered into a vinyasa flow · breathe along with your pranayama beside it</div></div>'+
       '</div>'+
       '<div style="text-align:right;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Flow</div><div id="wf-acc" style="font-size:2rem;font-weight:600;color:#C8472A;line-height:1;">--</div></div>'+
     '</div>'+
     '<div id="wf-prompt" style="text-align:center;color:#2B6B5E;font-size:.9rem;font-weight:500;margin-bottom:1.25rem;min-height:22px;">Press <b>Start</b>, then hold the arrow keys to breathe.</div>'+
-    '<div style="display:flex;justify-content:center;padding:0 1rem;">'+
-      '<div class="breath-stage-wrap">'+
+    '<div style="display:flex;justify-content:center;align-items:flex-start;gap:1.75rem;flex-wrap:wrap;padding:0 1rem;">'+
+      '<div id="wf-stage-wrap" class="breath-stage-wrap">'+
         '<div id="wf-stage" class="breath-stage" tabindex="0">'+
           '<svg viewBox="0 0 560 560" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none">'+
             '<g id="wf-rings">'+
@@ -1024,6 +1173,21 @@ function ensureWellnessStage(){
           '</div>'+
         '</div>'+
       '</div>'+
+      /* Pranayama breath-wave — a separate, passive display beside the pose circle. */
+      '<div id="wf-breath-panel" style="display:none;width:360px;max-width:100%;background:#fff;border:1px solid #e8dcc8;border-radius:14px;padding:1.15rem 1.25rem;">'+
+        '<div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#C8472A;margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem;"><i class="fa-solid fa-wind"></i>Pranayama</div>'+
+        '<div id="wf-breath-chips" style="display:none;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem;"></div>'+
+        '<div id="wf-breath-title" style="font-size:1.05rem;font-weight:600;color:#3D3A38;">—</div>'+
+        '<div id="wf-breath-ratio" style="font-size:.72rem;color:#9A9590;font-family:monospace;margin-bottom:.6rem;">—</div>'+
+        '<svg id="wf-breath-wave" viewBox="0 0 320 150" style="width:100%;height:auto;background:#fcfaf4;border:1px solid #f0e9dc;border-radius:10px;">'+
+          '<path id="wf-breath-area" d="" fill="#2B6B5E" fill-opacity="0.08"></path>'+
+          '<path id="wf-breath-track" d="" fill="none" stroke="#2B6B5E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>'+
+          '<circle id="wf-breath-dot" cx="16" cy="124" r="7" fill="#2B6B5E" stroke="#fff" stroke-width="2.5"></circle>'+
+        '</svg>'+
+        '<div id="wf-breath-phase" style="text-align:center;font-size:.82rem;font-weight:600;color:#9A9590;margin:.55rem 0 .75rem;min-height:20px;">Press Breathe to begin</div>'+
+        '<button id="wf-breath-btn" onclick="wellnessBreath&&wellnessBreath.toggle()" style="width:100%;padding:.8rem;border:none;border-radius:9px;background:#C8472A;color:#fff;font-size:.88rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-wind" style="margin-right:5px"></i>Breathe</button>'+
+        '<div style="margin-top:.7rem;text-align:center;font-size:.74rem;color:#b8a894;line-height:1.5;">Just follow the dot — it rises as you inhale, falls as you exhale, and loops on its own.</div>'+
+      '</div>'+
     '</div>'+
     '<div style="max-width:420px;margin:1.5rem auto 0;">'+
       '<div style="background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:1.25rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">'+
@@ -1037,7 +1201,7 @@ function ensureWellnessStage(){
         '<button id="wf-start" class="eky-btn-primary" style="flex:1;padding:.9rem;border:none;border-radius:9px;font-size:.9rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-play" style="margin-right:4px;"></i>Start</button>'+
         '<button onclick="wellnessFlow&&wellnessFlow.reset()" style="padding:.9rem 1.25rem;background:#fff;border:1px solid #e8dcc8;border-radius:9px;font-size:.85rem;font-weight:500;color:#5A5653;cursor:pointer;">Reset</button>'+
       '</div>'+
-      '<div style="margin-top:1rem;text-align:center;font-size:.78rem;color:#9A9590;line-height:1.6;">Hold <b>↑</b> (or drag up) to inhale · <b>↓</b> (or drag down) to exhale.<br>Breathing pauses hold the pose — just keep breathing through them.</div>'+
+      '<div style="margin-top:1rem;text-align:center;font-size:.78rem;color:#9A9590;line-height:1.6;">Hold <b>↑</b> (or drag up) to inhale · <b>↓</b> (or drag down) to exhale through your poses.<br>Your pranayama plays on its own beside the circle — press <b>Breathe</b> and follow along.</div>'+
     '</div>'+
   '</div>';
   document.body.appendChild(ov);
@@ -1047,24 +1211,46 @@ function animateSequence(){
   if(!mySequence || mySequence.length===0){ if(note) note.textContent='Add a pose or two first, then animate your sequence.'; return; }
   ensureWellnessStage();
   var stations=buildWellnessStations();
-  if(stations.length===0){ if(note) note.textContent='Add at least one pose to animate.'; return; }
+  var breaths=collectBreaths();
+  if(stations.length===0 && breaths.length===0){ if(note) note.textContent='Add at least one pose or breathing practice to animate.'; return; }
   var ov=gid('wellness-flow-overlay'); ov.style.display='block';
-  if(wellnessFlow) wellnessFlow.destroy();
-  wellnessFlow=new FlowController({
-    poses:stations, loop:false, allowLinear:true,
-    el:{ figure:gid('wf-figure'), arc:gid('wf-arc'), labels:gid('wf-labels'), rings:gid('wf-rings'),
-      linbar:gid('wf-linbar'), linfill:gid('wf-linfill'), accuracy:gid('wf-acc'),
-      curName:gid('wf-cur'), curSan:gid('wf-san'), nextPose:gid('wf-next'),
-      prompt:gid('wf-prompt'), phase:gid('wf-phase'), startBtn:gid('wf-start'), stage:gid('wf-stage') },
-    startMsg:'Press <b>Start</b>, then hold the arrow keys (or drag) to breathe through your sequence.',
-    completeMsg:'Beautiful — you flowed your whole sequence. 🙏' });
-  wellnessFlow.mount();
-  activeFlow=wellnessFlow;
+
+  /* Pose flow (asanas only, vinyasa-ordered) */
+  if(wellnessFlow){ wellnessFlow.destroy(); wellnessFlow=null; }
+  var wrap=gid('wf-stage-wrap');
+  if(stations.length){
+    if(wrap) wrap.style.display='';
+    wellnessFlow=new FlowController({
+      poses:stations, loop:false, allowLinear:true,
+      el:{ figure:gid('wf-figure'), arc:gid('wf-arc'), labels:gid('wf-labels'), rings:gid('wf-rings'),
+        linbar:gid('wf-linbar'), linfill:gid('wf-linfill'), accuracy:gid('wf-acc'),
+        curName:gid('wf-cur'), curSan:gid('wf-san'), nextPose:gid('wf-next'),
+        prompt:gid('wf-prompt'), phase:gid('wf-phase'), startBtn:gid('wf-start'), stage:gid('wf-stage') },
+      startMsg:'Press <b>Start</b>, then hold the arrow keys (or drag) to breathe through your sequence.',
+      completeMsg:'Beautiful — you flowed your whole sequence. 🙏' });
+    wellnessFlow.mount();
+    activeFlow=wellnessFlow;
+  } else {
+    if(wrap) wrap.style.display='none';
+    activeFlow=null;
+  }
+
+  /* Pranayama breath-wave (separate, passive) */
+  var panel=gid('wf-breath-panel');
+  if(breaths.length){
+    if(!wellnessBreath) wellnessBreath=new BreathWave();
+    wellnessBreath.setItems(breaths);
+    if(panel) panel.style.display='block';
+  } else {
+    if(wellnessBreath) wellnessBreath.stop();
+    if(panel) panel.style.display='none';
+  }
   window.scrollTo(0,0);
 }
 function closeWellnessFlow(){
   var ov=gid('wellness-flow-overlay'); if(ov) ov.style.display='none';
   if(wellnessFlow){ wellnessFlow.destroy(); wellnessFlow=null; }
+  if(wellnessBreath){ wellnessBreath.stop(); }
   activeFlow=(currentGame==='breath-game')?sunFlow:null;
 }
 
