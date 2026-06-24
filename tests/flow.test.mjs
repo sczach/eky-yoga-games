@@ -48,14 +48,29 @@ ok(s.N === 12 && s.unique === 11, 'Sun salutation: 12 steps, 11 unique stations'
 ok(s.labels === 11, 'Sun salutation renders 11 clock labels');
 ok(Math.abs(s.step - 360/11) < 0.01, 'STEP_DEG derived from live length (360/11)');
 
-/* ---------- on-stage drag/hold instruction cues (mobile-friendly affordance) ---------- */
+/* ---------- on-stage drag/hold instruction cues (device-aware affordance) ---------- */
 let howto = await page.evaluate(() => ({
   bannerText: document.querySelector('#breath-game .game-howto') ? document.querySelector('#breath-game .game-howto').textContent : '',
   chevUpInvite: document.getElementById('breath-chev-up').classList.contains('invite'),
   chevDownInvite: document.getElementById('breath-chev-down').classList.contains('invite')
 }));
-ok(/press[\s\S]*hold[\s\S]*drag/i.test(howto.bannerText), 'Sun Salutation shows a press-&-hold-&-drag how-to banner');
-ok(howto.chevUpInvite && howto.chevDownInvite, 'Both stage chevrons invite interaction before Start is pressed');
+ok(/inhale[\s\S]*exhale/i.test(howto.bannerText), 'Sun Salutation shows a how-to banner');
+ok(howto.chevUpInvite && howto.chevDownInvite, 'Both stage cues invite interaction before Start is pressed');
+
+/* Device-aware instruction copy: desktop leads with the arrow keys (and renders the cue as a
+   real keycap), touch leads with press-&-drag (and renders a drag chevron) — so the on-circle
+   cue never reads as "press the arrow keys" on a phone, nor dominates the desktop drag wording. */
+let copy = await page.evaluate(() => {
+  const desk = { howto: breathHowto('Start'), verbUp: breathVerb('up') };
+  const wasTouch = IS_TOUCH;
+  IS_TOUCH = true;
+  const touch = { howto: breathHowto('Start'), verbUp: breathVerb('up') };
+  IS_TOUCH = wasTouch;
+  return { desk, touch, key: document.querySelector('#breath-chev-up .bs-key') ? document.querySelector('#breath-chev-up .bs-key').textContent : '' };
+});
+ok(/arrow keys/i.test(copy.desk.howto) && /hold/i.test(copy.desk.verbUp), 'Desktop copy leads with the ↑ / ↓ arrow keys');
+ok(/drag/i.test(copy.touch.howto) && /drag/i.test(copy.touch.verbUp) && !/arrow keys/i.test(copy.touch.howto), 'Touch copy leads with press-&-drag and never mentions arrow keys');
+ok(copy.key === '↑', 'On a non-touch device the up cue renders as a ↑ keycap (the real key), not an abstract arrow');
 
 await page.evaluate(() => sunFlow.start());
 await page.waitForTimeout(60);
@@ -143,11 +158,14 @@ ok(JSON.stringify(w.names) === JSON.stringify(['Warrior II','Tree Pose','Downwar
 
 let wfHowto = await page.evaluate(() => ({
   bannerText: document.querySelector('#wellness-flow-overlay .game-howto') ? document.querySelector('#wellness-flow-overlay .game-howto').textContent : '',
+  bannerHasArrowKeys: /arrow keys/i.test(document.querySelector('#wellness-flow-overlay .game-howto').textContent),
   chevUpInvite: document.getElementById('wf-chev-up').classList.contains('invite'),
-  chevDownInvite: document.getElementById('wf-chev-down').classList.contains('invite')
+  chevDownInvite: document.getElementById('wf-chev-down').classList.contains('invite'),
+  hasKeycap: !!document.querySelector('#wf-chev-up .bs-key')
 }));
-ok(/press[\s\S]*hold[\s\S]*drag/i.test(wfHowto.bannerText), 'Animate-Sequence overlay shows the same press-&-hold-&-drag how-to banner');
-ok(wfHowto.chevUpInvite && wfHowto.chevDownInvite, 'Wellness stage chevrons also invite interaction before Start');
+ok(/Breathe/i.test(wfHowto.bannerText) && wfHowto.bannerHasArrowKeys, 'Animate-Sequence overlay shows the device-aware how-to banner (desktop: arrow keys)');
+ok(wfHowto.hasKeycap, 'Wellness stage cue also renders as a keycap on desktop');
+ok(wfHowto.chevUpInvite && wfHowto.chevDownInvite, 'Wellness stage cues also invite interaction before Start');
 
 /* breath-wave panel: separate, passive pranayama display */
 let bw = await page.evaluate(() => ({
