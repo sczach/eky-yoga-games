@@ -319,7 +319,10 @@
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
           <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#7580BE;">My sequence</div>
-          <button onclick="clearSequence()" style="background:none;border:none;cursor:pointer;color:#b8a894;font-size:.72rem;">clear</button>
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <button onclick="autoArrangeSequence()" title="Reorder poses into a vinyasa best-practice flow" style="background:none;border:none;cursor:pointer;color:#2B6B5E;font-size:.72rem;display:flex;align-items:center;gap:.3rem;"><i class="fa-solid fa-wand-magic-sparkles"></i>Auto-arrange</button>
+            <button onclick="clearSequence()" style="background:none;border:none;cursor:pointer;color:#b8a894;font-size:.72rem;">clear</button>
+          </div>
         </div>
         <div id="my-sequence" style="background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:1rem;min-height:120px;display:flex;flex-direction:column;gap:.5rem;"></div>
         <div style="display:flex;gap:.6rem;margin-top:1rem;">
@@ -968,11 +971,12 @@ function restartCleanFlow(){
 
 /* ════════════ WELLNESS — "Animate my Sequence" ════════════ */
 
-/* Vinyasa krama ordering: regardless of the order poses were clicked in, a sound
-   practice arcs centering → standing → balance → core → backbends → (twist as the
-   backbend counter) → hip openers → seated/forward folds → inversions → rest.
-   We rank each asana by its library `category` and stable-sort, so the user's
-   relative order is preserved only within a category. */
+/* Vinyasa krama ordering: a sound practice arcs centering → standing → balance →
+   core → backbends → (twist as the backbend counter) → hip openers → seated/
+   forward folds → inversions → rest. We rank each asana by its library `category`
+   and stable-sort, so the user's relative order is preserved within a category.
+   This is offered as an opt-in "Auto-arrange" — the user's manual drag order is
+   otherwise authoritative. */
 var VINYASA_ORDER={ warmup:0, standing:1, balance:2, core:3, backbend:4, twist:5, hip:6, seated:7, inversion:8, restorative:9 };
 function vinyasaRank(name){
   var p=findPose(name); var c=(p&&p.category)?p.category:'standing';
@@ -984,14 +988,13 @@ function sequenceAsanas(items){
     .map(function(x){ return x.it; });
 }
 
-/* Pranayama is no longer woven into the pose loop — breath items are split out
-   into their own passive breath-wave display (see BreathWave). Stations are
-   asanas only, reordered into a best-practice sequence. */
+/* Pranayama is split out into its own passive breath-wave display (see BreathWave).
+   Pose stations are the asanas only, kept in the exact order the user arranged
+   them in the My Sequence list (drag-to-reorder / Auto-arrange). */
 function buildWellnessStations(){
-  var asanas=mySequence.filter(function(it){ return it.type==='asana'; });
-  asanas=sequenceAsanas(asanas);
   var stations=[];
-  asanas.forEach(function(item){
+  mySequence.forEach(function(item){
+    if(item.type!=='asana') return;
     var pose=findPose(item.name); if(!pose) return;
     var rig=rigFromPoseArt(pose.id); rig.en=pose.name; rig.n=pose.sanskrit;
     rig.breath=(stations.length%2===0)?'inhale':'exhale';
@@ -1462,17 +1465,67 @@ function removeFromSequence(idx){
   mySequence.splice(idx,1); storeSet(SEQ_KEY,mySequence); renderSequence();
 }
 function clearSequence(){ mySequence=[]; storeSet(SEQ_KEY,mySequence); renderSequence(); }
+/* Move an item to a new slot (drag-to-reorder). `to` is the destination index in
+   the array AFTER the item has been pulled out. */
+function moveSequenceItem(from,to){
+  if(from===to) return;
+  if(from<0||from>=mySequence.length||to<0||to>mySequence.length-1) return;
+  var it=mySequence.splice(from,1)[0];
+  mySequence.splice(to,0,it);
+  storeSet(SEQ_KEY,mySequence); renderSequence();
+}
+/* Opt-in: reorder the poses into a vinyasa best-practice flow. Breath items keep
+   their relative order and move to the end (they play in their own panel anyway). */
+function autoArrangeSequence(){
+  var asanas=mySequence.filter(function(it){ return it.type==='asana'; });
+  var breaths=mySequence.filter(function(it){ return it.type==='breath'; });
+  mySequence=sequenceAsanas(asanas).concat(breaths);
+  storeSet(SEQ_KEY,mySequence); renderSequence();
+}
 function renderSequence(){
   var box=document.getElementById('my-sequence'); if(!box) return;
   if(mySequence.length===0){ box.innerHTML='<div style="color:#b8a894;font-size:.82rem;text-align:center;padding:1.5rem .5rem;">Add poses &amp; breathing from the left to build your practice.</div>'; return; }
   box.innerHTML='';
   mySequence.forEach(function(item,idx){
     var row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:#faf6f1;border-radius:7px;padding:.45rem .6rem;';
+    row.className='seq-row'; row.draggable=true; row.dataset.idx=idx;
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:#faf6f1;border-radius:7px;padding:.45rem .6rem;cursor:grab;border-top:2px solid transparent;border-bottom:2px solid transparent;';
     var icon = item.type==='breath' ? 'fa-wind' : 'fa-person';
     var col  = item.type==='breath' ? '#C8472A' : '#2B6B5E';
-    row.innerHTML='<div style="display:flex;align-items:center;gap:.5rem;min-width:0;"><span style="color:'+col+';font-size:.8rem;width:1rem;text-align:center"><i class="fa-solid '+icon+'"></i></span><span style="font-size:.84rem;color:#3D3A38;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+item.name+'</span></div><button onclick="removeFromSequence('+idx+')" style="background:none;border:none;cursor:pointer;color:#c4b8a8;font-size:.8rem;flex-shrink:0;"><i class="fa-solid fa-xmark"></i></button>';
+    row.innerHTML='<div style="display:flex;align-items:center;gap:.45rem;min-width:0;">'+
+      '<span class="seq-grip" style="color:#cdc2b2;font-size:.8rem;flex-shrink:0;cursor:grab;" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>'+
+      '<span style="color:'+col+';font-size:.8rem;width:1rem;text-align:center;flex-shrink:0;"><i class="fa-solid '+icon+'"></i></span>'+
+      '<span style="font-size:.84rem;color:#3D3A38;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+item.name+'</span></div>'+
+      '<button onclick="removeFromSequence('+idx+')" draggable="false" style="background:none;border:none;cursor:pointer;color:#c4b8a8;font-size:.8rem;flex-shrink:0;"><i class="fa-solid fa-xmark"></i></button>';
     box.appendChild(row);
+  });
+  wireSequenceDrag(box);
+}
+var seqDragSrc=null;
+function wireSequenceDrag(box){
+  var clearMarks=function(){ [].forEach.call(box.querySelectorAll('.seq-row'),function(r){ r.style.borderTopColor='transparent'; r.style.borderBottomColor='transparent'; }); };
+  [].forEach.call(box.querySelectorAll('.seq-row'),function(row){
+    row.addEventListener('dragstart',function(e){
+      seqDragSrc=+row.dataset.idx; row.style.opacity='0.4';
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed='move'; try{ e.dataTransfer.setData('text/plain',String(seqDragSrc)); }catch(_){ } }
+    });
+    row.addEventListener('dragend',function(){ row.style.opacity=''; seqDragSrc=null; clearMarks(); });
+    row.addEventListener('dragover',function(e){
+      e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect='move';
+      var r=row.getBoundingClientRect(), after=(e.clientY-r.top)>r.height/2;
+      clearMarks();
+      row.style.borderBottomColor=after?'#2B6B5E':'transparent';
+      row.style.borderTopColor=after?'transparent':'#2B6B5E';
+    });
+    row.addEventListener('drop',function(e){
+      e.preventDefault(); clearMarks();
+      if(seqDragSrc===null) return;
+      var targetIdx=+row.dataset.idx;
+      var r=row.getBoundingClientRect(), after=(e.clientY-r.top)>r.height/2;
+      var to=targetIdx+(after?1:0);
+      if(seqDragSrc<to) to--;
+      moveSequenceItem(seqDragSrc,to);
+    });
   });
 }
 function logSession(){

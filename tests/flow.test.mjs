@@ -78,17 +78,16 @@ await page.evaluate(() => restartCleanFlow());
 let clean = await page.evaluate(() => sunFlow.N);
 ok(clean === 12, 'Restart clean returns to base 12-pose salutation');
 
-/* ---------- WELLNESS: mixed asana + breath (vinyasa order + split breath) ---------- */
+/* ---------- WELLNESS: mixed asana + breath (manual order + split breath) ---------- */
 await page.evaluate(() => {
   showGame('wellness-guide');
-  // Deliberately scrambled click-order: standing, breath, balance, warmup, breath, restorative
   mySequence = [
-    { type:'asana', name:'Warrior II' },     // standing (rank 1)
+    { type:'asana', name:'Warrior II' },     // standing
     { type:'breath', name:'Box Breath' },    // pranayama
-    { type:'asana', name:'Tree Pose' },      // balance  (rank 2)
-    { type:'asana', name:'Downward Dog' },   // warmup   (rank 0)
+    { type:'asana', name:'Tree Pose' },      // balance
+    { type:'asana', name:'Downward Dog' },   // warmup
     { type:'breath', name:'4-7-8 Breath' },  // pranayama
-    { type:'asana', name:"Child's Pose" }    // restorative (rank 9)
+    { type:'asana', name:"Child's Pose" }    // restorative
   ];
   animateSequence();
 });
@@ -108,9 +107,9 @@ ok(w.unique === 4 && !w.loop, 'Open sequence: unique stations = N (no shared top
 ok(w.labels === 4, 'Wellness renders a label per asana station');
 ok(w.pauses === 0, 'No pause stations — pranayama is no longer woven into the pose loop');
 ok(w.linear === false, 'N>2 uses circular layout');
-// vinyasa krama: warmup → standing → balance → restorative, regardless of click order
-ok(JSON.stringify(w.names) === JSON.stringify(['Downward Dog','Warrior II','Tree Pose',"Child's Pose"]),
-   'Asanas reordered into vinyasa best-practice sequence, not click order');
+// manual order is authoritative: stations follow the My Sequence list order verbatim
+ok(JSON.stringify(w.names) === JSON.stringify(['Warrior II','Tree Pose','Downward Dog',"Child's Pose"]),
+   'Pose stations follow the user’s manual sequence order, not auto-sorted');
 
 /* breath-wave panel: separate, passive pranayama display */
 let bw = await page.evaluate(() => ({
@@ -161,16 +160,57 @@ console.log('Wellness run:', JSON.stringify(dw));
 ok(dw.done === true, 'Wellness sequence reaches done end-to-end');
 await page.screenshot({ path: SHOT + '/shot-wellness-animated.png' });
 
-/* ---------- vinyasa ordering: counter-pose (twist follows backbend) ---------- */
-let order2 = await page.evaluate(() => {
-  closeWellnessFlow();
-  mySequence = [ { type:'asana', name:'Supine Twist' }, { type:'asana', name:'Cobra' } ];
+/* ---------- manual drag-to-reorder controls the sequence ---------- */
+await page.evaluate(() => { closeWellnessFlow(); showGame('wellness-guide'); });
+let reorder = await page.evaluate(() => {
+  mySequence = [
+    { type:'asana', name:'Warrior II' },
+    { type:'asana', name:'Tree Pose' },
+    { type:'asana', name:'Downward Dog' }
+  ];
+  renderSequence();
+  const before = mySequence.map(i => i.name);
+  // drag the 3rd pose (idx 2) to the front
+  moveSequenceItem(2, 0);
+  const after = mySequence.map(i => i.name);
+  // the My Sequence rows reflect the new order and remain draggable
+  const rows = [].map.call(document.querySelectorAll('#my-sequence .seq-row'),
+    r => r.querySelector('span:nth-child(3)').textContent);
+  const draggable = [].every.call(document.querySelectorAll('#my-sequence .seq-row'), r => r.draggable === true);
+  // persisted to localStorage
+  const stored = JSON.parse(localStorage.getItem('eky_sequence')).map(i => i.name);
+  // and the animation honors it
   animateSequence();
-  return wellnessFlow.poses.map(p => p.en);
+  const stations = wellnessFlow.poses.map(p => p.en);
+  return { before, after, rows, draggable, stored, stations };
 });
-console.log('Counter-pose order:', JSON.stringify(order2));
-ok(JSON.stringify(order2) === JSON.stringify(['Cobra','Supine Twist']),
-   'Backbend sequenced before its twist counter-pose, regardless of click order');
+console.log('Drag reorder:', JSON.stringify(reorder));
+ok(JSON.stringify(reorder.before) === JSON.stringify(['Warrior II','Tree Pose','Downward Dog']), 'Sequence starts in added order');
+ok(JSON.stringify(reorder.after) === JSON.stringify(['Downward Dog','Warrior II','Tree Pose']), 'moveSequenceItem reorders the sequence');
+ok(JSON.stringify(reorder.rows) === JSON.stringify(reorder.after), 'My Sequence rows re-render in the new order');
+ok(reorder.draggable === true, 'Sequence rows are draggable for reordering');
+ok(JSON.stringify(reorder.stored) === JSON.stringify(reorder.after), 'Reordered sequence is persisted to localStorage');
+ok(JSON.stringify(reorder.stations) === JSON.stringify(reorder.after), 'Animation plays the user’s manual order verbatim');
+await page.evaluate(() => closeWellnessFlow());
+
+/* ---------- Auto-arrange opt-in: snap poses into vinyasa best-practice order ---------- */
+let auto = await page.evaluate(() => {
+  showGame('wellness-guide');
+  // scrambled: twist-counter before backbend, rest before standing, with a breath mixed in
+  mySequence = [
+    { type:'asana', name:'Supine Twist' },   // twist (5)
+    { type:'asana', name:"Child's Pose" },   // restorative (9)
+    { type:'breath', name:'Box Breath' },    // pranayama
+    { type:'asana', name:'Cobra' },          // backbend (4)
+    { type:'asana', name:'Warrior II' }      // standing (1)
+  ];
+  renderSequence();
+  autoArrangeSequence();
+  return mySequence.map(i => i.type === 'breath' ? '('+i.name+')' : i.name);
+});
+console.log('Auto-arrange:', JSON.stringify(auto));
+ok(JSON.stringify(auto) === JSON.stringify(['Warrior II','Cobra','Supine Twist',"Child's Pose",'(Box Breath)']),
+   'Auto-arrange sorts poses to vinyasa order (backbend before its twist counter), breath moved to end');
 await page.evaluate(() => closeWellnessFlow());
 
 /* ---------- breath-only sequence: pose stage hidden, breath panel alone ---------- */
