@@ -1,0 +1,11 @@
+{
+  "name": "eky-yoga-games",
+  "private": true,
+  "description": "EKY Yoga Co. browser games — single-file site (index.html). Playwright is dev-only for headless testing.",
+  "scripts": {
+    "test": "node tests/flow.test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  }
+}
