@@ -280,6 +280,15 @@
         <button onclick="resetBreathGame()" style="padding:.9rem 1.25rem;background:#fff;border:1px solid #e8dcc8;border-radius:9px;font-size:.85rem;font-weight:500;color:#5A5653;cursor:pointer;">Reset</button>
       </div>
       <div style="margin-top:1rem;text-align:center;font-size:.78rem;color:#9A9590;line-height:1.6;">Hold <b>↑</b> (or drag up) to inhale · <b>↓</b> (or drag down) to exhale.<br>Each pose is carried by one breath — keep it smooth for the best Flow score.</div>
+      <div id="build-on-panel" style="display:none;margin-top:1.25rem;background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:1.25rem;">
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#C8472A;margin-bottom:.5rem;">Build on this flow</div>
+        <p style="font-size:.82rem;color:#5A5653;margin-bottom:.85rem;line-height:1.5;">Add standing poses that grow out of the Low Lunge — woven into both sides of your salutation, then flow again.</p>
+        <div id="build-on-chips" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;"></div>
+        <div style="display:flex;gap:.6rem;">
+          <button onclick="applyVariations()" class="eky-btn-primary" style="flex:1;padding:.75rem;border:none;border-radius:9px;font-weight:600;cursor:pointer;">Flow again with these</button>
+          <button onclick="restartCleanFlow()" style="padding:.75rem 1rem;background:#fff;border:1px solid #e8dcc8;border-radius:9px;font-weight:500;color:#5A5653;cursor:pointer;">Restart clean</button>
+        </div>
+      </div>
     </div>
   </div><!-- /breath-game -->
 
@@ -313,7 +322,10 @@
           <button onclick="clearSequence()" style="background:none;border:none;cursor:pointer;color:#b8a894;font-size:.72rem;">clear</button>
         </div>
         <div id="my-sequence" style="background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:1rem;min-height:120px;display:flex;flex-direction:column;gap:.5rem;"></div>
-        <button id="log-session-btn" onclick="logSession()" class="eky-btn-primary" style="margin-top:1rem;width:100%;padding:.85rem;border:none;border-radius:9px;font-size:.88rem;font-weight:600;cursor:pointer;">Log this session</button>
+        <div style="display:flex;gap:.6rem;margin-top:1rem;">
+          <button id="animate-seq-btn" onclick="animateSequence()" style="flex:1;padding:.85rem;border:1px solid #2B6B5E;background:#f3faf8;color:#2B6B5E;border-radius:9px;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;"><i class="fa-solid fa-play"></i>Animate this Sequence</button>
+          <button id="log-session-btn" onclick="logSession()" class="eky-btn-primary" style="flex:1;padding:.85rem;border:none;border-radius:9px;font-size:.85rem;font-weight:600;cursor:pointer;">Log this session</button>
+        </div>
         <div id="wellness-note" style="margin-top:.6rem;text-align:center;font-size:.75rem;color:#9A9590;"></div>
       </div>
     </div>
@@ -337,7 +349,8 @@ function showGame(gameId) {
     window.scrollTo(0,0);
     currentGame = gameId;
     if (gameId === 'matching-game') { initMatchingGame(); }
-    if (gameId === 'breath-game'   && !window.breathGameInitialized) initBreathGame();
+    if (gameId === 'breath-game') { if (!window.breathGameInitialized) initBreathGame(); else activeFlow = sunFlow; }
+    else { activeFlow = null; }   // only the breath game listens for breath input on this screen
     if (gameId === 'wellness-guide'&& !window.wellnessInitialized)   initWellness();
   }
 }
@@ -375,6 +388,7 @@ function hideGame() {
   if (splash) splash.style.display = 'block';
   window.scrollTo(0,0);
   currentGame = null;
+  activeFlow = null;
 }
 
 /* ════════════ SHARED: POSE LIBRARY ════════════ */
@@ -636,7 +650,205 @@ function warmConfetti(){
   }, idx*3); })(i); }
 }
 
-/* ════════════ SUN SAL BREATH GAME ════════════ */
+/* ════════════ FLOW ENGINE — reusable breath-driven controller ════════════ */
+/* One controller drives one breath-flow over an array of rig keyframes
+   ({en,n,breath,hip,sh,head,aF,aB,lF,lB}, in the 200×220 figure viewBox).
+   The Sun Salutation game and the Wellness "Animate my Sequence" view are
+   both callers of this same controller. */
+function gid(id){ return document.getElementById(id); }
+
+/* Pure geometry / interpolation helpers (shared) */
+function polar(cx,cy,r,deg){ var a=deg*Math.PI/180; return [cx+r*Math.sin(a), cy-r*Math.cos(a)]; }
+function arcPath(deg,r,cx,cy){
+  r=r||228; cx=cx||280; cy=cy||280;
+  if(deg<=0.1) return '';
+  var f=function(p){return p[0].toFixed(2)+' '+p[1].toFixed(2);};
+  if(deg>=359.9){ var tp=polar(cx,cy,r,0),bt=polar(cx,cy,r,180); return 'M '+f(tp)+' A '+r+' '+r+' 0 1 1 '+f(bt)+' A '+r+' '+r+' 0 1 1 '+f(tp); }
+  var s=polar(cx,cy,r,0),e=polar(cx,cy,r,deg),lg=deg>180?1:0;
+  return 'M '+f(s)+' A '+r+' '+r+' 0 '+lg+' 1 '+f(e);
+}
+function eio(t){ return t*t*(3-2*t); }
+function lerpP(a,b,e){
+  var L=function(p,q){return [p[0]+(q[0]-p[0])*e, p[1]+(q[1]-p[1])*e];};
+  return {hip:L(a.hip,b.hip),sh:L(a.sh,b.sh),head:L(a.head,b.head),
+    aF:{e:L(a.aF.e,b.aF.e),h:L(a.aF.h,b.aF.h)},aB:{e:L(a.aB.e,b.aB.e),h:L(a.aB.h,b.aB.h)},
+    lF:{k:L(a.lF.k,b.lF.k),f:L(a.lF.f,b.lF.f)},lB:{k:L(a.lB.k,b.lB.k),f:L(a.lB.f,b.lB.f)}};
+}
+function drawFig(j, svg){
+  if(!svg) return;
+  var seg=function(a,b){return '<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'"/>';};
+  var pl=function(){var pts=[].slice.call(arguments);return '<polyline points="'+pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ')+'"/>';};
+  svg.innerHTML='<circle class="breath-ring" cx="'+j.head[0].toFixed(1)+'" cy="'+j.head[1].toFixed(1)+'" r="0" fill="none"/>'+
+    '<g stroke="#3D3A38" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none">'+
+    pl(j.hip,j.lB.k,j.lB.f)+pl(j.sh,j.aB.e,j.aB.h)+seg(j.hip,j.sh)+pl(j.hip,j.lF.k,j.lF.f)+pl(j.sh,j.aF.e,j.aF.h)+seg(j.sh,j.head)+
+    '</g><circle cx="'+j.head[0].toFixed(1)+'" cy="'+j.head[1].toFixed(1)+'" r="13" fill="#3D3A38"/>';
+}
+function cloneRig(r){ return { en:r.en,n:r.n,breath:r.breath,pause:r.pause,
+  hip:r.hip.slice(),sh:r.sh.slice(),head:r.head.slice(),
+  aF:{e:r.aF.e.slice(),h:r.aF.h.slice()}, aB:{e:r.aB.e.slice(),h:r.aB.h.slice()},
+  lF:{k:r.lF.k.slice(),f:r.lF.f.slice()}, lB:{k:r.lB.k.slice(),f:r.lB.f.slice()} }; }
+
+/* Adapter: a POSE_ART 11-point silhouette (100×125 box) → rig keyframe (200×220 box).
+   POSE_ART order: [head, shoulder, hip, elbowL, handL, elbowR, handR, kneeL, footL, kneeR, footR].
+   Library poses are a single static silhouette — there is no separate inhale/exhale
+   arm variant — so the one captured arm/leg position is held for the whole breath.
+   The figure rig is a two-limb side rig (front+back arm, front+back leg); we map the
+   two library arms onto aF/aB and the two library legs onto lF/lB so wide-arm poses
+   (Warrior II, Tree…) still read correctly rather than collapsing to a single stick. */
+function rigFromPoseArt(id){
+  var P=POSE_ART[id]||POSE_ART[1];
+  var SX=200/100, SY=220/125;
+  var m=function(pt){ return [pt[0]*SX, pt[1]*SY]; };
+  var head=m(P[0]),sh=m(P[1]),hip=m(P[2]),eL=m(P[3]),hL=m(P[4]),eR=m(P[5]),hR=m(P[6]),kL=m(P[7]),fL=m(P[8]),kR=m(P[9]),fR=m(P[10]);
+  return { hip:hip, sh:sh, head:head,
+    aF:{e:eR,h:hR}, aB:{e:eL,h:hL},
+    lF:{k:kR,f:fR}, lB:{k:kL,f:fL} };
+}
+
+function FlowController(cfg){
+  this.cfg=cfg||{};
+  this.el=this.cfg.el||{};
+  this.loop=!!this.cfg.loop;                 // share start/end "Mountain/Prayer" station at top
+  this.allowLinear=!!this.cfg.allowLinear;   // permit a horizontal layout for very short flows
+  this.FILL=0.5; this.DECAY=0.8;
+  this.raf=null;
+  this.setPoses(this.cfg.poses||[]);
+  this._resetState();
+}
+FlowController.prototype.setPoses=function(arr){
+  this.poses=arr; this.N=arr.length;
+  /* Station count is always derived from the live sequence — never hardcoded.
+     loop flows (a salutation that returns to its start pose) share one top station,
+     so unique stations = N-1; open flows use all N. */
+  this.uniqueCount=this.loop ? Math.max(this.N-1,1) : this.N;
+  this.STEP_DEG=360/Math.max(this.uniqueCount,1);
+  this.endDeg=this.loop ? 360 : (this.N-1)*this.STEP_DEG;
+  /* A 1–2 station circle wastes the "return to start" ring metaphor on a linear
+     practice, so short open flows fall back to a horizontal progress bar. */
+  this.linear=this.allowLinear && this.uniqueCount<=2;
+  this.buildLabels();
+};
+FlowController.prototype._resetState=function(){
+  this.idx=0; this.prog=0; this.dir=null;
+  this.run=false; this.done=false; this.started=false;
+  this.lastT=0; this.smooth=true; this.trans=0; this.smCount=0;
+};
+FlowController.prototype.stationName=function(i){ var p=this.poses[i]; return p?p.en:''; };
+FlowController.prototype.buildLabels=function(){
+  var w=this.el.labels; if(!w) return;
+  if(this.el.rings) this.el.rings.style.display = this.linear ? 'none' : '';
+  if(this.el.linbar) this.el.linbar.style.display = this.linear ? 'block' : 'none';
+  if(this.el.arc) this.el.arc.style.display = this.linear ? 'none' : '';
+  w.innerHTML='';
+  var uc=this.uniqueCount, i, el, xy;
+  for(i=0;i<uc;i++){
+    el=document.createElement('div'); el.className='clock-label'; el.dataset.index=i;
+    if(this.linear){
+      var x = uc===1 ? 50 : (16 + 68*(i/(uc-1)));
+      el.style.left=x+'%'; el.style.top='20%';
+    } else {
+      xy=polar(280,280,242, i*this.STEP_DEG);
+      el.style.left=(xy[0]/560*100)+'%'; el.style.top=(xy[1]/560*100)+'%';
+    }
+    el.innerHTML='<div class="lbl-num">'+(i+1)+'</div><div class="lbl-name">'+this.stationName(i)+'</div>';
+    w.appendChild(el);
+  }
+};
+FlowController.prototype.updateLabels=function(){
+  var self=this, labels=this.el.labels?this.el.labels.querySelectorAll('.clock-label'):[];
+  [].forEach.call(labels,function(el){
+    var i=parseInt(el.dataset.index);
+    if(self.loop && i===0){
+      el.classList.toggle('active', self.done||self.idx===0);
+      el.classList.toggle('done', self.idx>0 && !self.done);
+    } else {
+      el.classList.toggle('done', self.done || i<self.idx);
+      el.classList.toggle('active', !self.done && i===self.idx);
+    }
+  });
+};
+FlowController.prototype.reqDir=function(){
+  if(this.idx>=this.N-1) return null;
+  return this.poses[this.idx+1].breath==='inhale'?'up':'down';
+};
+FlowController.prototype.renderLinear=function(){
+  if(!this.el.linfill) return;
+  var frac=this.done?1:((this.idx+this.prog)/Math.max(this.N-1,1));
+  this.el.linfill.style.width=(Math.max(0,Math.min(1,frac))*100)+'%';
+};
+FlowController.prototype.render=function(){
+  var a=this.poses[this.idx], b=this.poses[Math.min(this.idx+1,this.N-1)];
+  if(a&&b) drawFig(lerpP(a,b,eio(this.prog)), this.el.figure);
+  if(this.linear){ this.renderLinear(); }
+  else if(this.el.arc){ this.el.arc.setAttribute('d', arcPath(this.done?this.endDeg:(this.idx+this.prog)*this.STEP_DEG)); }
+};
+FlowController.prototype.updateInfo=function(){
+  var e=this.el, cur=this.poses[this.idx]; if(!cur) return;
+  if(e.curName) e.curName.textContent=cur.en;
+  if(e.curSan) e.curSan.textContent=cur.n;
+  if(this.done){
+    if(e.nextPose) e.nextPose.innerHTML='<span style="color:#2B6B5E">Flow complete</span>';
+    if(e.prompt) e.prompt.innerHTML=this.cfg.completeMsg||'Beautiful — you breathed the whole flow. 🙏';
+    if(e.phase){ e.phase.textContent='NAMASTE'; e.phase.style.color='#2B6B5E'; }
+    return;
+  }
+  var nx=this.poses[this.idx+1];
+  if(e.nextPose && nx) e.nextPose.innerHTML=nx.en+' <span style="color:#c4a876">('+nx.n+')</span>';
+  var rd=this.reqDir();
+  if(!this.run){
+    if(e.prompt) e.prompt.innerHTML=this.started?'Paused — press <b>Resume</b> to continue.':(this.cfg.startMsg||'Press <b>Start Flow</b>, then hold the arrow keys to breathe.');
+    if(e.phase){ e.phase.textContent='—'; e.phase.style.color='#a68563'; }
+  } else if(nx && nx.pause){
+    if(e.prompt) e.prompt.innerHTML='Breathing pause — <b>'+nx.en+'</b>. '+(rd==='up'?'Hold <b>↑</b>':'Hold <b>↓</b>')+' and breathe slow.';
+    if(e.phase){ e.phase.textContent=rd==='up'?'INHALE ↑':'EXHALE ↓'; e.phase.style.color='#7580BE'; }
+  } else if(rd==='up'){
+    if(e.prompt) e.prompt.innerHTML='Hold <b>↑</b> — inhale into '+(nx?nx.en:'');
+    if(e.phase){ e.phase.textContent='INHALE ↑'; e.phase.style.color='#C8472A'; }
+  } else {
+    if(e.prompt) e.prompt.innerHTML='Hold <b>↓</b> — exhale into '+(nx?nx.en:'');
+    if(e.phase){ e.phase.textContent='EXHALE ↓'; e.phase.style.color='#2B6B5E'; }
+  }
+};
+FlowController.prototype.commitTrans=function(){
+  this.idx++; this.trans++; if(this.smooth) this.smCount++; this.prog=0; this.smooth=true;
+  if(this.el.accuracy) this.el.accuracy.textContent=Math.round(this.smCount/this.trans*100)+'%';
+  if(this.idx>=this.N-1){
+    this.done=true; this.run=false; this.dir=null;
+    if(this.el.arc) this.el.arc.setAttribute('d', arcPath(this.endDeg));
+    if(this.linear) this.renderLinear();
+    this.setStartBtn('restart');
+    warmConfetti();
+    if(this.cfg.onComplete) this.cfg.onComplete(this);
+  }
+  this.updateLabels(); this.updateInfo();
+};
+FlowController.prototype.tick=function(t){
+  if(!this.lastT) this.lastT=t;
+  var dt=Math.min((t-this.lastT)/1000,0.1); this.lastT=t;
+  if(this.run&&!this.done){
+    var rd=this.reqDir();
+    if(this.dir===rd&&rd){ this.prog+=this.FILL*dt; if(this.prog>=1){ this.prog=1; this.commitTrans(); } }
+    else if(this.prog>0){ if(this.prog>0.04) this.smooth=false; this.prog-=this.DECAY*dt; if(this.prog<0) this.prog=0; }
+  }
+  this.render();
+  var self=this; this.raf=requestAnimationFrame(function(t){ self.tick(t); });
+};
+FlowController.prototype.setStartBtn=function(mode){
+  var btn=this.el.startBtn; if(!btn) return; var self=this;
+  if(mode==='pause'){ btn.innerHTML='<i class="fa-solid fa-pause" style="margin-right:6px"></i>Pause'; btn.onclick=function(){ self.pause(); }; }
+  else if(mode==='restart'){ btn.innerHTML='<i class="fa-solid fa-rotate-right" style="margin-right:6px"></i>Flow Again'; btn.onclick=function(){ self.reset(); }; }
+  else{ btn.innerHTML='<i class="fa-solid fa-play" style="margin-right:6px"></i>'+(mode==='resume'?'Resume':'Start Flow'); btn.onclick=function(){ self.start(); }; }
+};
+FlowController.prototype.mount=function(){
+  this.buildLabels(); this.reset();
+  if(!this.raf){ var self=this; this.raf=requestAnimationFrame(function(t){ self.tick(t); }); }
+};
+FlowController.prototype.start=function(){ if(this.run||this.done) return; this.run=true; this.started=true; this.lastT=0; this.setStartBtn('pause'); this.updateLabels(); this.updateInfo(); };
+FlowController.prototype.pause=function(){ this.run=false; this.dir=null; this.setStartBtn('resume'); this.updateInfo(); };
+FlowController.prototype.reset=function(){ this._resetState(); if(this.el.accuracy) this.el.accuracy.textContent='--'; this.setStartBtn('start'); this.updateLabels(); this.updateInfo(); this.render(); if(this.cfg.onReset) this.cfg.onReset(this); };
+FlowController.prototype.destroy=function(){ if(this.raf){ cancelAnimationFrame(this.raf); this.raf=null; } };
+
+/* ════════════ SUN SALUTATION — keyframes (P1–P8, mirrored to 12) ════════════ */
 var P1={en:"Mountain / Prayer",n:"Pranamasana",breath:"start",hip:[100,135],sh:[100,82],head:[100,52],aF:{e:[93,106],h:[103,98]},aB:{e:[91,106],h:[100,98]},lF:{k:[104,168],f:[104,205]},lB:{k:[96,168],f:[96,205]}};
 var P2={en:"Raised Arms",n:"Hasta Uttanasana",breath:"inhale",hip:[100,135],sh:[103,80],head:[107,52],aF:{e:[105,53],h:[104,24]},aB:{e:[101,53],h:[100,24]},lF:{k:[101,168],f:[100,205]},lB:{k:[99,168],f:[100,205]}};
 var P3={en:"Forward Fold",n:"Uttanasana",breath:"exhale",hip:[100,130],sh:[118,118],head:[125,134],aF:{e:[123,150],h:[120,192]},aB:{e:[120,150],h:[117,192]},lF:{k:[101,165],f:[99,205]},lB:{k:[99,165],f:[98,205]}};
@@ -650,139 +862,247 @@ var sunSalPoses=[P1,P2,P3,P4,P5,P6,P7,P8,
   Object.assign({},P3,{breath:"exhale"}),
   Object.assign({},P2,{breath:"inhale"}),
   Object.assign({},P1,{breath:"exhale"})];
-var N_P=sunSalPoses.length;
-var bIdx=0,bProg=0,bDir=null,bRun=false,bDone=false,bStarted=false;
-var bRaf=null,bLastT=0,bSmooth=true,bTrans=0,bSmCount=0;
-var FILL=0.5, DECAY=0.8;
 
-function reqDir(){ if(bIdx>=N_P-1) return null; return sunSalPoses[bIdx+1].breath==='inhale'?'up':'down'; }
-function polar(cx,cy,r,deg){ var a=deg*Math.PI/180; return [cx+r*Math.sin(a), cy-r*Math.cos(a)]; }
-function arcPath(deg){
-  if(deg<=0.1) return '';
-  var r=228,cx=280,cy=280,f=function(p){return p[0].toFixed(2)+' '+p[1].toFixed(2);};
-  if(deg>=359.9){ var tp=polar(cx,cy,r,0),bt=polar(cx,cy,r,180); return 'M '+f(tp)+' A '+r+' '+r+' 0 1 1 '+f(bt)+' A '+r+' '+r+' 0 1 1 '+f(tp); }
-  var s=polar(cx,cy,r,0),e=polar(cx,cy,r,deg),lg=deg>180?1:0;
-  return 'M '+f(s)+' A '+r+' '+r+' 0 '+lg+' 1 '+f(e);
-}
-function eio(t){ return t*t*(3-2*t); }
-function lerpP(a,b,e){
-  var L=function(p,q){return [p[0]+(q[0]-p[0])*e, p[1]+(q[1]-p[1])*e];};
-  return {hip:L(a.hip,b.hip),sh:L(a.sh,b.sh),head:L(a.head,b.head),
-    aF:{e:L(a.aF.e,b.aF.e),h:L(a.aF.h,b.aF.h)},aB:{e:L(a.aB.e,b.aB.e),h:L(a.aB.h,b.aB.h)},
-    lF:{k:L(a.lF.k,b.lF.k),f:L(a.lF.f,b.lF.f)},lB:{k:L(a.lB.k,b.lB.k),f:L(a.lB.f,b.lB.f)}};
-}
-function drawFig(j){
-  var svg=document.getElementById('figure-svg'); if(!svg) return;
-  var seg=function(a,b){return '<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'"/>';};
-  var pl=function(){var pts=[].slice.call(arguments);return '<polyline points="'+pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ')+'"/>';};
-  svg.innerHTML='<circle class="breath-ring" cx="'+j.head[0].toFixed(1)+'" cy="'+j.head[1].toFixed(1)+'" r="0" fill="none"/>'+
-    '<g stroke="#3D3A38" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none">'+
-    pl(j.hip,j.lB.k,j.lB.f)+pl(j.sh,j.aB.e,j.aB.h)+seg(j.hip,j.sh)+pl(j.hip,j.lF.k,j.lF.f)+pl(j.sh,j.aF.e,j.aF.h)+seg(j.sh,j.head)+
-    '</g><circle cx="'+j.head[0].toFixed(1)+'" cy="'+j.head[1].toFixed(1)+'" r="13" fill="#3D3A38"/>';
-}
-function buildClockLabels(){
-  var w=document.getElementById('clock-labels'); if(!w||w.dataset.built) return;
-  /* Step 1 (Mountain/Prayer) and step 12 (same pose) share one point at the top.
-     The remaining 10 unique poses (steps 2-11) are spaced evenly around the rest of the circle. */
-  var uniqueCount=N_P-1;
-  for(var i=0;i<uniqueCount;i++){
-    var xy=polar(280,280,242,i*(360/uniqueCount)), el=document.createElement('div');
-    el.className='clock-label'; el.dataset.index=i;
-    el.style.left=(xy[0]/560*100)+'%'; el.style.top=(xy[1]/560*100)+'%';
-    el.innerHTML='<div class="lbl-num">'+(i===0?1:i+1)+'</div><div class="lbl-name">'+sunSalPoses[i].en+'</div>';
-    w.appendChild(el);
-  }
-  w.dataset.built='1';
-}
-function updateLabels(){
-  document.querySelectorAll('#clock-labels .clock-label').forEach(function(el){
-    var i=parseInt(el.dataset.index);
-    if(i===0){
-      el.classList.toggle('active', bDone||bIdx===0);
-      el.classList.toggle('done', bIdx>0&&!bDone);
-    } else {
-      el.classList.toggle('done', bDone||i<bIdx);
-      el.classList.toggle('active', !bDone&&i===bIdx);
+/* Hand-authored variation keyframes (same side-view rig style/scale as P1–P8),
+   chosen to flow out of the Low Lunge base (P4): Warrior I/II, High Lunge and
+   Extended Side Angle all share the bent-front-knee / extended-back-leg stance. */
+var SUNSAL_VARIATIONS=[
+  { id:'warrior1', en:'Warrior I', n:'Virabhadrasana I', rig:{
+      hip:[96,134],sh:[97,92],head:[99,64],
+      aF:{e:[103,64],h:[107,30]},aB:{e:[99,64],h:[103,30]},
+      lF:{k:[128,170],f:[134,205]},lB:{k:[58,184],f:[34,205]} } },
+  { id:'warrior2', en:'Warrior II', n:'Virabhadrasana II', rig:{
+      hip:[96,138],sh:[96,94],head:[96,66],
+      aF:{e:[118,95],h:[142,97]},aB:{e:[74,95],h:[50,97]},
+      lF:{k:[128,170],f:[134,205]},lB:{k:[58,184],f:[34,205]} } },
+  { id:'highlunge', en:'High Lunge', n:'Ashta Chandrasana', rig:{
+      hip:[96,132],sh:[97,90],head:[99,62],
+      aF:{e:[103,62],h:[107,28]},aB:{e:[99,62],h:[103,28]},
+      lF:{k:[128,168],f:[134,205]},lB:{k:[64,172],f:[34,200]} } },
+  { id:'sideangle', en:'Extended Side Angle', n:'Utthita Parsvakonasana', rig:{
+      hip:[98,140],sh:[122,116],head:[138,106],
+      aF:{e:[150,92],h:[172,76]},aB:{e:[124,150],h:[130,182]},
+      lF:{k:[140,168],f:[146,205]},lB:{k:[62,182],f:[36,205]} } }
+];
+function variationById(id){ for(var i=0;i<SUNSAL_VARIATIONS.length;i++){ if(SUNSAL_VARIATIONS[i].id===id) return SUNSAL_VARIATIONS[i]; } return null; }
+
+/* Build a session-local salutation, inserting chosen variations + a return to the
+   Low Lunge after BOTH the right-side (idx 3) and left-side (idx 8) lunge steps.
+   Breaths on inserted stations alternate so each transition swaps inhale/exhale. */
+function buildExtendedSunSal(ids){
+  if(!ids||!ids.length) return sunSalPoses.slice();
+  var out=[];
+  sunSalPoses.forEach(function(p,idx){
+    out.push(p);
+    if(idx===3 || idx===8){
+      var prev=out[out.length-1].breath;
+      var flip=function(b){ return b==='inhale'?'exhale':'inhale'; };
+      ids.forEach(function(id){
+        var v=variationById(id); if(!v) return;
+        var st=cloneRig(v.rig); st.en=v.en; st.n=v.n;
+        st.breath=flip(prev); prev=st.breath;
+        out.push(st);
+      });
+      var lr=cloneRig(p); lr.en=p.en; lr.n=p.n; lr.breath=flip(prev); prev=lr.breath;
+      out.push(lr);
     }
   });
+  return out;
 }
-function updatePoseInfo(){
-  var cur=sunSalPoses[bIdx];
-  var cpE=document.getElementById('current-pose'),csE=document.getElementById('current-pose-sanskrit');
-  var nxE=document.getElementById('next-pose'),prE=document.getElementById('breath-prompt'),phE=document.getElementById('breath-phase');
-  if(cpE)cpE.textContent=cur.en; if(csE)csE.textContent=cur.n;
-  if(!nxE||!prE||!phE) return;
-  if(bDone){ nxE.innerHTML='<span style="color:#2B6B5E">Flow complete</span>'; prE.innerHTML='Beautiful — you breathed the whole salutation. 🙏'; phE.textContent='NAMASTE'; phE.style.color='#2B6B5E'; return; }
-  var nx=sunSalPoses[bIdx+1];
-  nxE.innerHTML=nx.en+' <span style="color:#c4a876">('+nx.n+')</span>';
-  var rd=reqDir();
-  if(!bRun){ prE.innerHTML=bStarted?'Paused — press <b>Resume</b> to continue.':'Press <b>Start Flow</b>, then hold arrow keys to breathe.'; phE.textContent='—'; phE.style.color='#a68563'; }
-  else if(rd==='up'){ prE.innerHTML='Hold <b>↑</b> — inhale into '+nx.en; phE.textContent='INHALE ↑'; phE.style.color='#C8472A'; }
-  else{ prE.innerHTML='Hold <b>↓</b> — exhale into '+nx.en; phE.textContent='EXHALE ↓'; phE.style.color='#2B6B5E'; }
-}
-var STEP_DEG=360/(N_P-1); /* arc sweeps one station-gap per breath step (11 gaps) */
-function bRender(){
-  var a=sunSalPoses[bIdx], b=sunSalPoses[Math.min(bIdx+1,N_P-1)];
-  drawFig(lerpP(a,b,eio(bProg)));
-  var arc=document.getElementById('progress-arc');
-  if(arc) arc.setAttribute('d', arcPath(bDone?360:(bIdx+bProg)*STEP_DEG));
-}
-function commitTrans(){
-  bIdx++; bTrans++; if(bSmooth) bSmCount++; bProg=0; bSmooth=true;
-  var baE=document.getElementById('breath-accuracy'); if(baE) baE.textContent=Math.round(bSmCount/bTrans*100)+'%';
-  if(bIdx>=N_P-1){ bDone=true; bRun=false; bDir=null; var arc=document.getElementById('progress-arc'); if(arc) arc.setAttribute('d',arcPath(360)); setStartBtn('restart'); warmConfetti(); }
-  updateLabels(); updatePoseInfo();
-}
-function bLoop(t){
-  if(!bLastT) bLastT=t;
-  var dt=Math.min((t-bLastT)/1000,0.1); bLastT=t;
-  if(bRun&&!bDone){
-    var rd=reqDir();
-    if(bDir===rd&&rd){ bProg+=FILL*dt; if(bProg>=1){ bProg=1; commitTrans(); } }
-    else if(bProg>0){ if(bProg>0.04) bSmooth=false; bProg-=DECAY*dt; if(bProg<0) bProg=0; }
-  }
-  bRender(); bRaf=requestAnimationFrame(bLoop);
-}
-function setStartBtn(mode){
-  var btn=document.getElementById('start-breath-btn'); if(!btn) return;
-  if(mode==='pause'){ btn.innerHTML='<i class="fa-solid fa-pause" style="margin-right:6px"></i>Pause'; btn.onclick=pauseBreath; }
-  else if(mode==='restart'){ btn.innerHTML='<i class="fa-solid fa-rotate-right" style="margin-right:6px"></i>Flow Again'; btn.onclick=function(){ resetBreathState(); initBreathGameStart(); }; }
-  else{ btn.innerHTML='<i class="fa-solid fa-play" style="margin-right:6px"></i>'+(mode==='resume'?'Resume':'Start Flow'); btn.onclick=startBreath; }
-}
-function startBreath(){ if(bRun) return; bRun=true; bStarted=true; bLastT=0; if(!bRaf) bRaf=requestAnimationFrame(bLoop); setStartBtn('pause'); updateLabels(); updatePoseInfo(); }
-function pauseBreath(){ bRun=false; bDir=null; setStartBtn('resume'); updatePoseInfo(); }
-function resetBreathState(){ bIdx=0;bProg=0;bDir=null;bRun=false;bDone=false;bStarted=false;bSmooth=true;bTrans=0;bSmCount=0; var baE=document.getElementById('breath-accuracy'); if(baE) baE.textContent='--'; }
-function resetBreathGame(){ resetBreathState(); setStartBtn('start'); buildClockLabels(); updateLabels(); updatePoseInfo(); bRender(); }
-function initBreathGameStart(){ setStartBtn('start'); updateLabels(); updatePoseInfo(); bRender(); }
-function initBreathGame(){ buildClockLabels(); resetBreathState(); setStartBtn('start'); updateLabels(); updatePoseInfo(); bRender(); if(!bRaf) bRaf=requestAnimationFrame(bLoop); window.breathGameInitialized=true; }
 
+/* ════════════ SUN SAL — wiring ════════════ */
+var sunFlow=null, wellnessFlow=null, activeFlow=null;
+var sunVariationSel=[];
+
+function initBreathGame(){
+  if(!sunFlow){
+    sunFlow=new FlowController({
+      poses:sunSalPoses, loop:true, allowLinear:false,
+      el:{ figure:gid('figure-svg'), arc:gid('progress-arc'), labels:gid('clock-labels'),
+        accuracy:gid('breath-accuracy'), curName:gid('current-pose'), curSan:gid('current-pose-sanskrit'),
+        nextPose:gid('next-pose'), prompt:gid('breath-prompt'), phase:gid('breath-phase'),
+        startBtn:gid('start-breath-btn'), stage:gid('breath-stage') },
+      startMsg:'Press <b>Start Flow</b>, then hold the arrow keys to breathe through the poses.',
+      completeMsg:'Beautiful — you breathed the whole salutation. 🙏',
+      onComplete:function(){ showBuildPanel(); },
+      onReset:function(){ hideBuildPanel(); } });
+  }
+  sunFlow.mount(); activeFlow=sunFlow; window.breathGameInitialized=true;
+}
+function resetBreathGame(){ if(sunFlow){ sunVariationSel=[]; sunFlow.setPoses(sunSalPoses); sunFlow.reset(); } hideBuildPanel(); }
+
+/* "Build on this flow" panel */
+function buildPanelChips(){
+  var box=gid('build-on-chips'); if(!box) return;
+  box.innerHTML='';
+  SUNSAL_VARIATIONS.forEach(function(v){
+    var on=sunVariationSel.indexOf(v.id)>=0;
+    var chip=document.createElement('button');
+    chip.type='button'; chip.dataset.id=v.id;
+    chip.className='build-chip'+(on?' on':'');
+    chip.style.cssText='border:1.5px solid '+(on?'#C8472A':'#e8dcc8')+';background:'+(on?'#fdeee9':'#fff')+';color:'+(on?'#C8472A':'#5A5653')+';border-radius:999px;padding:.45rem .85rem;font-size:.8rem;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:.4rem;';
+    chip.innerHTML='<i class="fa-solid '+(on?'fa-check':'fa-plus')+'" style="font-size:.7rem"></i>'+v.en;
+    chip.onclick=function(){ toggleVariation(v.id); };
+    box.appendChild(chip);
+  });
+}
+function toggleVariation(id){
+  var i=sunVariationSel.indexOf(id);
+  if(i>=0) sunVariationSel.splice(i,1); else sunVariationSel.push(id);
+  buildPanelChips();
+}
+function showBuildPanel(){ var p=gid('build-on-panel'); if(p){ buildPanelChips(); p.style.display='block'; } }
+function hideBuildPanel(){ var p=gid('build-on-panel'); if(p) p.style.display='none'; }
+function applyVariations(){
+  if(!sunFlow) return;
+  hideBuildPanel();
+  sunFlow.setPoses(buildExtendedSunSal(sunVariationSel));
+  sunFlow.reset();
+  sunFlow.start();
+}
+function restartCleanFlow(){
+  if(!sunFlow) return;
+  sunVariationSel=[]; hideBuildPanel();
+  sunFlow.setPoses(sunSalPoses); sunFlow.reset();
+}
+
+/* ════════════ WELLNESS — "Animate my Sequence" ════════════ */
+function buildWellnessStations(){
+  var stations=[], lastRig=null;
+  mySequence.forEach(function(item){
+    if(item.type==='asana'){
+      var pose=findPose(item.name); if(!pose) return;
+      var rig=rigFromPoseArt(pose.id); rig.en=pose.name; rig.n=pose.sanskrit;
+      rig.breath = (stations.length%2===0)?'inhale':'exhale';
+      stations.push(rig); lastRig=rig;
+    } else {
+      /* pranayama: a breathing-pause station — figure holds the previous pose
+         (rig copied from it) so lerpP produces no movement through the pause. */
+      var base=lastRig?cloneRig(lastRig):rigFromPoseArt(1);
+      base.pause=true; base.en=item.name; base.n='Pranayama';
+      base.breath=(stations.length%2===0)?'inhale':'exhale';
+      stations.push(base);
+    }
+  });
+  return stations;
+}
+function ensureWellnessStage(){
+  if(gid('wellness-flow-overlay')) return;
+  var ov=document.createElement('div');
+  ov.id='wellness-flow-overlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#fdfcf5 0%,#fef9df 100%);overflow:auto;display:none;';
+  ov.innerHTML=''+
+  '<div style="max-width:980px;margin:0 auto;padding:1.5rem;">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid #e8dcc8;">'+
+      '<div style="display:flex;align-items:center;gap:1rem;">'+
+        '<button onclick="closeWellnessFlow()" style="background:none;border:none;cursor:pointer;color:#2B6B5E;padding:.5rem;border-radius:8px;display:flex;align-items:center;gap:.4rem;font-size:.85rem;"><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>'+
+        '<div><div style="font-family:\'Lora\',serif;font-size:1.4rem;font-weight:600;color:#3D3A38;">Animate My Sequence</div>'+
+        '<div style="font-size:.8rem;color:#2B6B5E;margin-top:1px;">Hold ↑ to inhale · Hold ↓ to exhale · breathe through your practice</div></div>'+
+      '</div>'+
+      '<div style="text-align:right;"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;">Flow</div><div id="wf-acc" style="font-size:2rem;font-weight:600;color:#C8472A;line-height:1;">--</div></div>'+
+    '</div>'+
+    '<div id="wf-prompt" style="text-align:center;color:#2B6B5E;font-size:.9rem;font-weight:500;margin-bottom:1.25rem;min-height:22px;">Press <b>Start</b>, then hold the arrow keys to breathe.</div>'+
+    '<div style="display:flex;justify-content:center;padding:0 1rem;">'+
+      '<div class="breath-stage-wrap">'+
+        '<div id="wf-stage" class="breath-stage" tabindex="0">'+
+          '<svg viewBox="0 0 560 560" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none">'+
+            '<g id="wf-rings">'+
+            '<circle cx="280" cy="280" r="215" fill="#C8472A"></circle>'+
+            '<circle cx="280" cy="280" r="193" fill="#E8A07A"></circle>'+
+            '<circle cx="280" cy="280" r="179" fill="#2B6B5E"></circle>'+
+            '<circle cx="280" cy="280" r="163" fill="#7580BE"></circle>'+
+            '<circle cx="280" cy="280" r="145" fill="#F5E535"></circle>'+
+            '<circle cx="280" cy="280" r="228" fill="none" stroke="#e2d8cc" stroke-width="7"></circle>'+
+            '</g>'+
+            '<path id="wf-arc" d="" fill="none" stroke="#3D3A38" stroke-width="7" stroke-linecap="round"></path>'+
+          '</svg>'+
+          '<div id="wf-labels" style="position:absolute;inset:0;pointer-events:none;"></div>'+
+          '<div id="wf-linbar" style="display:none;position:absolute;left:8%;right:8%;top:34%;height:10px;background:#ede7de;border-radius:6px;overflow:hidden;"><div id="wf-linfill" style="width:0;height:100%;background:#C8472A;transition:width .1s linear;"></div></div>'+
+          '<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;">'+
+            '<svg id="wf-figure" viewBox="0 0 200 220" style="width:200px;height:220px;"></svg>'+
+            '<div id="wf-phase" style="font-size:.65rem;font-weight:700;letter-spacing:.25em;color:#2B6B5E;margin-top:4px;">—</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="max-width:420px;margin:1.5rem auto 0;">'+
+      '<div style="background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:1.25rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">'+
+        '<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;margin-bottom:2px;">Current</div>'+
+        '<div id="wf-cur" style="font-size:1.05rem;font-weight:600;color:#3D3A38;">—</div>'+
+        '<div id="wf-san" style="font-size:.82rem;color:#2B6B5E;">—</div></div>'+
+        '<div style="text-align:right;"><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:#9A9590;margin-bottom:2px;">Next</div>'+
+        '<div id="wf-next" style="font-size:.82rem;font-weight:500;color:#3D3A38;line-height:1.3;">—</div></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:.75rem;">'+
+        '<button id="wf-start" class="eky-btn-primary" style="flex:1;padding:.9rem;border:none;border-radius:9px;font-size:.9rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-play" style="margin-right:4px;"></i>Start</button>'+
+        '<button onclick="wellnessFlow&&wellnessFlow.reset()" style="padding:.9rem 1.25rem;background:#fff;border:1px solid #e8dcc8;border-radius:9px;font-size:.85rem;font-weight:500;color:#5A5653;cursor:pointer;">Reset</button>'+
+      '</div>'+
+      '<div style="margin-top:1rem;text-align:center;font-size:.78rem;color:#9A9590;line-height:1.6;">Hold <b>↑</b> (or drag up) to inhale · <b>↓</b> (or drag down) to exhale.<br>Breathing pauses hold the pose — just keep breathing through them.</div>'+
+    '</div>'+
+  '</div>';
+  document.body.appendChild(ov);
+}
+function animateSequence(){
+  var note=gid('wellness-note');
+  if(!mySequence || mySequence.length===0){ if(note) note.textContent='Add a pose or two first, then animate your sequence.'; return; }
+  ensureWellnessStage();
+  var stations=buildWellnessStations();
+  if(stations.length===0){ if(note) note.textContent='Add at least one pose to animate.'; return; }
+  var ov=gid('wellness-flow-overlay'); ov.style.display='block';
+  if(wellnessFlow) wellnessFlow.destroy();
+  wellnessFlow=new FlowController({
+    poses:stations, loop:false, allowLinear:true,
+    el:{ figure:gid('wf-figure'), arc:gid('wf-arc'), labels:gid('wf-labels'), rings:gid('wf-rings'),
+      linbar:gid('wf-linbar'), linfill:gid('wf-linfill'), accuracy:gid('wf-acc'),
+      curName:gid('wf-cur'), curSan:gid('wf-san'), nextPose:gid('wf-next'),
+      prompt:gid('wf-prompt'), phase:gid('wf-phase'), startBtn:gid('wf-start'), stage:gid('wf-stage') },
+    startMsg:'Press <b>Start</b>, then hold the arrow keys (or drag) to breathe through your sequence.',
+    completeMsg:'Beautiful — you flowed your whole sequence. 🙏' });
+  wellnessFlow.mount();
+  activeFlow=wellnessFlow;
+  window.scrollTo(0,0);
+}
+function closeWellnessFlow(){
+  var ov=gid('wellness-flow-overlay'); if(ov) ov.style.display='none';
+  if(wellnessFlow){ wellnessFlow.destroy(); wellnessFlow=null; }
+  activeFlow=(currentGame==='breath-game')?sunFlow:null;
+}
+
+/* ════════════ SHARED INPUT (drives whichever flow is active) ════════════ */
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'&&currentGame){ hideGame(); return; }
-  if(currentGame!=='breath-game') return;
-  if(e.key==='ArrowUp'){ e.preventDefault(); bDir='up'; }
-  if(e.key==='ArrowDown'){ e.preventDefault(); bDir='down'; }
+  if(e.key==='Escape'){
+    var ov=gid('wellness-flow-overlay');
+    if(ov && ov.style.display==='block'){ closeWellnessFlow(); return; }
+    if(currentGame){ hideGame(); return; }
+  }
+  if(!activeFlow) return;
+  if(e.key==='ArrowUp'){ e.preventDefault(); activeFlow.dir='up'; }
+  if(e.key==='ArrowDown'){ e.preventDefault(); activeFlow.dir='down'; }
 });
 document.addEventListener('keyup',function(e){
-  if(currentGame!=='breath-game') return;
-  if(e.key==='ArrowUp'&&bDir==='up') bDir=null;
-  if(e.key==='ArrowDown'&&bDir==='down') bDir=null;
+  if(!activeFlow) return;
+  if(e.key==='ArrowUp'&&activeFlow.dir==='up') activeFlow.dir=null;
+  if(e.key==='ArrowDown'&&activeFlow.dir==='down') activeFlow.dir=null;
 });
 (function(){
-  var drag=false,sY=0;
+  var drag=false,sY=0,fl=null;
   document.addEventListener('pointerdown',function(e){
-    var s=document.getElementById('breath-stage');
-    if(!s||currentGame!=='breath-game'||!s.contains(e.target)) return;
-    drag=true; sY=e.clientY; bDir=null; s.focus({preventScroll:true});
+    if(!activeFlow) return; var s=activeFlow.el.stage;
+    if(!s||!s.contains(e.target)) return;
+    drag=true; fl=activeFlow; sY=e.clientY; fl.dir=null; if(s.focus) s.focus({preventScroll:true});
   });
   document.addEventListener('pointermove',function(e){
-    if(!drag) return;
+    if(!drag||!fl) return;
     var dy=sY-e.clientY;
-    if(dy>10) bDir='up'; else if(dy<-10) bDir='down'; else bDir=null;
+    if(dy>10) fl.dir='up'; else if(dy<-10) fl.dir='down'; else fl.dir=null;
   });
-  var end=function(){ if(drag){ drag=false; bDir=null; } };
+  var end=function(){ if(drag){ drag=false; if(fl) fl.dir=null; fl=null; } };
   document.addEventListener('pointerup',end);
   document.addEventListener('pointercancel',end);
 })();
+
+/* Back-compat shim for tests/console: advance the active flow one station. */
+function commitTrans(){ if(activeFlow) activeFlow.commitTrans(); }
 
 /* ════════════ ENERGY LINES ════════════ */
 var enPairs=6, enSelPose=null, enLinked=0, enConnections=[];
