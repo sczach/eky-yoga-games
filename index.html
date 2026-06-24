@@ -59,6 +59,10 @@
   .bs-chev-down.invite { animation: bsChevDown 1.4s ease-in-out infinite; }
   @keyframes bsChevUp { 0%,100%{ transform:translateX(-50%) translateY(0); } 50%{ transform:translateX(-50%) translateY(-7px); } }
   @keyframes bsChevDown { 0%,100%{ transform:translateX(-50%) translateY(0); } 50%{ transform:translateX(-50%) translateY(7px); } }
+  /* On desktop the cue is a real keyboard key — render it as a keycap so it never reads as an abstract direction arrow. */
+  .bs-key { display:inline-flex; align-items:center; justify-content:center; min-width:1.45rem; height:1.45rem;
+    padding:0 .2rem; border:1.5px solid currentColor; border-bottom-width:3px; border-radius:6px;
+    font-size:.95rem; font-weight:700; line-height:1; }
 
   /* Clock labels */
   .clock-label {
@@ -261,9 +265,9 @@
     </div>
     <div class="game-howto">
       <div class="ht-ico"><i class="fa-solid fa-hand-pointer"></i></div>
-      <div>Press <b>Start Flow</b>, then <b>press &amp; hold the circle and drag</b> — up to inhale, down to exhale (or hold <b>↑ / ↓</b> on a keyboard). The chevrons on the circle show which way to go.</div>
+      <div id="breath-howto">Press <b>Start Flow</b>, then breathe through the poses — the cues on the circle show which way to go.</div>
     </div>
-    <div id="breath-prompt" style="text-align:center;color:#2B6B5E;font-size:.9rem;font-weight:500;margin-bottom:1.25rem;min-height:22px;">Press <b>Start Flow</b>, then press &amp; hold the circle and drag (or hold ↑ / ↓) to breathe through the poses.</div>
+    <div id="breath-prompt" style="text-align:center;color:#2B6B5E;font-size:.9rem;font-weight:500;margin-bottom:1.25rem;min-height:22px;">Press <b>Start Flow</b> to breathe through the poses.</div>
     <div style="display:flex;justify-content:center;padding:0 1rem;">
       <div class="breath-stage-wrap">
         <div id="breath-stage" class="breath-stage" tabindex="0">
@@ -302,7 +306,7 @@
         <button id="start-breath-btn" class="eky-btn-primary" style="flex:1;padding:.9rem;border:none;border-radius:9px;font-size:.9rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;"><i class="fa-solid fa-play" style="margin-right:4px;"></i>Start Flow</button>
         <button onclick="resetBreathGame()" style="padding:.9rem 1.25rem;background:#fff;border:1px solid #e8dcc8;border-radius:9px;font-size:.85rem;font-weight:500;color:#5A5653;cursor:pointer;">Reset</button>
       </div>
-      <div style="margin-top:1rem;text-align:center;font-size:.78rem;color:#9A9590;line-height:1.6;">Each pose is carried by one breath — keep the drag (or key-hold) smooth and unhurried for the best Flow score.</div>
+      <div id="breath-tip" style="margin-top:1rem;text-align:center;font-size:.78rem;color:#9A9590;line-height:1.6;">Each pose is carried by one breath — keep it smooth and unhurried for the best Flow score.</div>
       <div id="build-on-panel" style="display:none;margin-top:1.25rem;background:#fff;border:1px solid #e8dcc8;border-radius:10px;padding:1.25rem;">
         <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#C8472A;margin-bottom:.5rem;">Build on this flow</div>
         <p style="font-size:.82rem;color:#5A5653;margin-bottom:.85rem;line-height:1.5;">Add standing poses that grow out of the Low Lunge — woven into both sides of your salutation, then flow again.</p>
@@ -825,13 +829,13 @@ FlowController.prototype.updateInfo=function(){
     if(e.prompt) e.prompt.innerHTML=this.started?'Paused — press <b>Resume</b> to continue.':(this.cfg.startMsg||'Press <b>Start Flow</b>, then hold the arrow keys to breathe.');
     if(e.phase){ e.phase.textContent='—'; e.phase.style.color='#a68563'; }
   } else if(nx && nx.pause){
-    if(e.prompt) e.prompt.innerHTML='Breathing pause — <b>'+nx.en+'</b>. '+(rd==='up'?'Drag up / hold <b>↑</b>':'Drag down / hold <b>↓</b>')+' and breathe slow.';
+    if(e.prompt) e.prompt.innerHTML='Breathing pause — <b>'+nx.en+'</b>. '+breathVerb(rd)+' and breathe slow.';
     if(e.phase){ e.phase.textContent=rd==='up'?'INHALE ↑':'EXHALE ↓'; e.phase.style.color='#7580BE'; }
   } else if(rd==='up'){
-    if(e.prompt) e.prompt.innerHTML='Drag up / hold <b>↑</b> — inhale into '+(nx?nx.en:'');
+    if(e.prompt) e.prompt.innerHTML=breathVerb('up')+' — inhale into '+(nx?nx.en:'');
     if(e.phase){ e.phase.textContent='INHALE ↑'; e.phase.style.color='#C8472A'; }
   } else {
-    if(e.prompt) e.prompt.innerHTML='Drag down / hold <b>↓</b> — exhale into '+(nx?nx.en:'');
+    if(e.prompt) e.prompt.innerHTML=breathVerb('down')+' — exhale into '+(nx?nx.en:'');
     if(e.phase){ e.phase.textContent='EXHALE ↓'; e.phase.style.color='#2B6B5E'; }
   }
 };
@@ -953,6 +957,38 @@ function buildExtendedSunSal(ids){
   return out;
 }
 
+/* ════════════ DEVICE-AWARE INSTRUCTIONS ════════════ */
+/* Touch devices drive the flow by pressing & dragging the circle; desktop users hold the
+   ↑ / ↓ arrow keys. We tailor every instruction string (and the on-circle cue itself) to the
+   primary input so the keyboard-style chevrons don't read as "press the arrow keys" on a phone,
+   and the drag wording doesn't dominate on a desktop where the keys are the real control. */
+var IS_TOUCH=(function(){
+  try{ if(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true; }catch(e){}
+  return (!('matchMedia' in window)) && ('ontouchstart' in window || (navigator.maxTouchPoints||0)>0);
+})();
+if(document.documentElement) document.documentElement.classList.add(IS_TOUCH?'is-touch':'is-desktop');
+
+/* Verb phrase for a single breath direction, e.g. "Drag up" / "Hold <b>↑</b>". */
+function breathVerb(dir){
+  if(IS_TOUCH) return dir==='up'?'Drag up':'Drag down';
+  return dir==='up'?'Hold <b>↑</b>':'Hold <b>↓</b>';
+}
+/* The how-to banner / start-prompt sentence, shared by both stages. */
+function breathHowto(startWord){
+  if(IS_TOUCH) return 'Press <b>'+startWord+'</b>, then <b>press &amp; hold the circle and drag</b> — up to inhale, down to exhale.';
+  return 'Press <b>'+startWord+'</b>, then hold the <b>↑</b> and <b>↓</b> arrow keys — up to inhale, down to exhale. (You can also drag the circle up or down.)';
+}
+/* Fill an on-circle cue: a keycap on desktop (it IS the arrow key), a drag chevron on touch. */
+function decorateChev(el,dir){
+  if(!el) return;
+  var label=dir==='up'?'inhale':'exhale';
+  if(IS_TOUCH){
+    el.innerHTML='<i class="fa-solid fa-chevron-'+dir+'"></i><span>'+label+'</span>';
+  } else {
+    el.innerHTML='<kbd class="bs-key">'+(dir==='up'?'↑':'↓')+'</kbd><span>'+label+'</span>';
+  }
+}
+
 /* ════════════ SUN SAL — wiring ════════════ */
 var sunFlow=null, wellnessFlow=null, activeFlow=null, wellnessBreath=null;
 var sunVariationSel=[];
@@ -966,10 +1002,13 @@ function initBreathGame(){
         nextPose:gid('next-pose'), prompt:gid('breath-prompt'), phase:gid('breath-phase'),
         startBtn:gid('start-breath-btn'), stage:gid('breath-stage'),
         chevUp:gid('breath-chev-up'), chevDown:gid('breath-chev-down') },
-      startMsg:'Press <b>Start Flow</b>, then press &amp; hold the circle and drag (or hold <b>↑ / ↓</b>) to breathe through the poses.',
+      startMsg:breathHowto('Start Flow'),
       completeMsg:'Beautiful — you breathed the whole salutation. 🙏',
       onComplete:function(){ showBuildPanel(); },
       onReset:function(){ hideBuildPanel(); } });
+    decorateChev(gid('breath-chev-up'),'up'); decorateChev(gid('breath-chev-down'),'down');
+    var hb=gid('breath-howto'); if(hb) hb.innerHTML=breathHowto('Start Flow')+' The cues on the circle show which way to go.';
+    var bt=gid('breath-tip'); if(bt) bt.innerHTML='Each pose is carried by one breath — keep the '+(IS_TOUCH?'drag':'key-hold')+' smooth and unhurried for the best Flow score.';
   }
   sunFlow.mount(); activeFlow=sunFlow; window.breathGameInitialized=true;
 }
@@ -1196,9 +1235,9 @@ function ensureWellnessStage(){
     '</div>'+
     '<div class="game-howto">'+
       '<div class="ht-ico"><i class="fa-solid fa-hand-pointer"></i></div>'+
-      '<div>Press <b>Start</b>, then <b>press &amp; hold the circle and drag</b> — up to inhale, down to exhale through each pose (or hold <b>↑ / ↓</b>). Pranayama runs on its own beside it — press <b>Breathe</b> whenever you\'re ready.</div>'+
+      '<div id="wf-howto">'+breathHowto('Start')+' Pranayama runs on its own beside it — press <b>Breathe</b> whenever you\'re ready.</div>'+
     '</div>'+
-    '<div id="wf-prompt" style="text-align:center;color:#2B6B5E;font-size:.9rem;font-weight:500;margin-bottom:1.25rem;min-height:22px;">Press <b>Start</b>, then press &amp; hold the circle and drag (or hold ↑ / ↓) to breathe.</div>'+
+    '<div id="wf-prompt" style="text-align:center;color:#2B6B5E;font-size:.9rem;font-weight:500;margin-bottom:1.25rem;min-height:22px;">Press <b>Start</b> to breathe through your sequence.</div>'+
     '<div style="display:flex;justify-content:center;align-items:flex-start;gap:1.75rem;flex-wrap:wrap;padding:0 1rem;">'+
       '<div id="wf-stage-wrap" class="breath-stage-wrap">'+
         '<div id="wf-stage" class="breath-stage" tabindex="0">'+
@@ -1215,8 +1254,8 @@ function ensureWellnessStage(){
           '</svg>'+
           '<div id="wf-labels" style="position:absolute;inset:0;pointer-events:none;"></div>'+
           '<div id="wf-linbar" style="display:none;position:absolute;left:8%;right:8%;top:34%;height:10px;background:#ede7de;border-radius:6px;overflow:hidden;"><div id="wf-linfill" style="width:0;height:100%;background:#C8472A;transition:width .1s linear;"></div></div>'+
-          '<div class="bs-chev bs-chev-up" id="wf-chev-up"><i class="fa-solid fa-chevron-up"></i><span>inhale</span></div>'+
-          '<div class="bs-chev bs-chev-down" id="wf-chev-down"><i class="fa-solid fa-chevron-down"></i><span>exhale</span></div>'+
+          '<div class="bs-chev bs-chev-up" id="wf-chev-up"></div>'+
+          '<div class="bs-chev bs-chev-down" id="wf-chev-down"></div>'+
           '<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;">'+
             '<svg id="wf-figure" viewBox="0 0 200 220" style="width:200px;height:220px;"></svg>'+
             '<div id="wf-phase" style="font-size:.65rem;font-weight:700;letter-spacing:.25em;color:#2B6B5E;margin-top:4px;">—</div>'+
@@ -1251,7 +1290,7 @@ function ensureWellnessStage(){
         '<button id="wf-start" class="eky-btn-primary" style="flex:1;padding:.9rem;border:none;border-radius:9px;font-size:.9rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-play" style="margin-right:4px;"></i>Start</button>'+
         '<button onclick="wellnessFlow&&wellnessFlow.reset()" style="padding:.9rem 1.25rem;background:#fff;border:1px solid #e8dcc8;border-radius:9px;font-size:.85rem;font-weight:500;color:#5A5653;cursor:pointer;">Reset</button>'+
       '</div>'+
-      '<div style="margin-top:1rem;text-align:center;font-size:.78rem;color:#9A9590;line-height:1.6;">Keep each drag (or key-hold) smooth and unhurried — your pranayama keeps its own pace beside the circle.</div>'+
+      '<div style="margin-top:1rem;text-align:center;font-size:.78rem;color:#9A9590;line-height:1.6;">Keep each '+(IS_TOUCH?'drag':'key-hold')+' smooth and unhurried — your pranayama keeps its own pace beside the circle.</div>'+
     '</div>'+
   '</div>';
   document.body.appendChild(ov);
@@ -1277,8 +1316,9 @@ function animateSequence(){
         curName:gid('wf-cur'), curSan:gid('wf-san'), nextPose:gid('wf-next'),
         prompt:gid('wf-prompt'), phase:gid('wf-phase'), startBtn:gid('wf-start'), stage:gid('wf-stage'),
         chevUp:gid('wf-chev-up'), chevDown:gid('wf-chev-down') },
-      startMsg:'Press <b>Start</b>, then press &amp; hold the circle and drag (or hold <b>↑ / ↓</b>) to breathe through your sequence.',
+      startMsg:breathHowto('Start'),
       completeMsg:'Beautiful — you flowed your whole sequence. 🙏' });
+    decorateChev(gid('wf-chev-up'),'up'); decorateChev(gid('wf-chev-down'),'down');
     wellnessFlow.mount();
     activeFlow=wellnessFlow;
   } else {
