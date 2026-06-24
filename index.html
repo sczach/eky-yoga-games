@@ -23,11 +23,21 @@
   .eky-game-card:hover { border-color: #c4a876 !important; transform: translateY(-3px); box-shadow: 0 10px 28px rgba(139,111,71,0.13); }
 
   /* Pose match interactive states */
-  .match-card { cursor: pointer; user-select: none; transition: border-color 0.2s ease, opacity 0.25s ease; }
-  .match-card.selected { border-color: #C8472A !important; box-shadow: 0 0 0 3px rgba(200,71,42,0.18); }
-  .match-card.matched { opacity: 0.5; pointer-events: none; }
+  .match-card { cursor: pointer; user-select: none; box-shadow: 0 2px 6px rgba(139,111,71,0.07);
+    transition: border-color 0.2s ease, opacity 0.25s ease, transform 0.18s ease, box-shadow 0.2s ease; }
+  .match-card:hover { border-color: #c4a876; transform: translateY(-2px); box-shadow: 0 8px 18px rgba(139,111,71,0.14); }
+  .match-card.selected { border-color: #C8472A !important; box-shadow: 0 0 0 3px rgba(200,71,42,0.18); transform: translateY(-2px); }
+  .match-card.matched { opacity: 0.45; pointer-events: none; transform: none; box-shadow: none; }
+  .match-card.matched.is-image { border-color: #2B6B5E !important; }
   .match-card.dragging { opacity: 0.6; }
-  .match-card.drop-hover { border-color: #2B6B5E !important; box-shadow: 0 0 0 3px rgba(43,107,94,0.2); }
+  .match-card.drop-hover { border-color: #2B6B5E !important; box-shadow: 0 0 0 3px rgba(43,107,94,0.2); transform: translateY(-2px); }
+
+  /* Game instructions banner */
+  .game-howto { display:flex; align-items:center; gap:.7rem; background:#fbf4ea; border:1px solid #efe2cf;
+    border-radius:11px; padding:.7rem 1rem; margin-bottom:1.5rem; font-size:.82rem; color:#8a6f47; line-height:1.4; }
+  .game-howto .ht-ico { flex-shrink:0; width:1.9rem; height:1.9rem; border-radius:50%; background:#2B6B5E14;
+    color:#2B6B5E; display:flex; align-items:center; justify-content:center; font-size:.85rem; }
+  .game-howto b { color:#5c3a2a; font-weight:600; }
 
   /* Breath game stage */
   .breath-stage-wrap { width: 560px; max-width: 100%; }
@@ -64,8 +74,9 @@
   .level-tab.active { border-color:#2B6B5E; color:#2B6B5E; background:#f3faf8; font-weight:500; }
 
   /* Energy Lines */
-  .energy-card { cursor: pointer; user-select: none; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
-  .energy-card:hover { border-color: #c4a876; }
+  .energy-card { cursor: pointer; user-select: none; box-shadow: 0 2px 6px rgba(139,111,71,0.07);
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+  .energy-card:hover { border-color: #c4a876; transform: translateY(-2px); box-shadow: 0 8px 18px rgba(139,111,71,0.14); }
   .energy-card.selected { border-color: #C8472A !important; box-shadow: 0 0 0 3px rgba(200,71,42,0.18); transform: scale(1.02); }
   .energy-card.linked { border-color: #2B6B5E !important; background: #f3faf8 !important; }
 
@@ -184,9 +195,13 @@
 
     <!-- ─── LEVEL 1: Pose Connection ─── -->
     <div id="level-pose">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
-      <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Yoga Poses</div><div id="pose-images" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;"></div></div>
-      <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.75rem;">Names &amp; Cues</div><div id="pose-texts" style="display:flex;flex-direction:column;gap:.6rem;"></div></div>
+    <div class="game-howto">
+      <div class="ht-ico"><i class="fa-solid fa-hand-pointer"></i></div>
+      <div>Tap a <b>pose diagram</b> on the left, then tap its matching <b>name &amp; cue</b> on the right — or just drag a pose straight onto its card. Match all poses to finish.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:0.85fr 1.15fr;gap:2.5rem;align-items:start;">
+      <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.9rem;">Yoga Poses</div><div id="pose-images" style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;"></div></div>
+      <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#2B6B5E;margin-bottom:.9rem;">Names &amp; Cues</div><div id="pose-texts" style="display:flex;flex-direction:column;gap:.7rem;"></div></div>
     </div>
     <div style="margin-top:1.5rem;display:flex;align-items:center;justify-content:space-between;">
       <button onclick="resetMatchGame()" style="background:none;border:1px solid #e8dcc8;border-radius:8px;padding:.5rem 1rem;cursor:pointer;color:#2B6B5E;font-size:.82rem;display:flex;align-items:center;gap:.4rem;"><i class="fa-solid fa-redo"></i> New Set</button>
@@ -196,6 +211,10 @@
 
     <!-- ─── LEVEL 2: Energy Lines ─── -->
     <div id="level-energy" style="display:none;">
+      <div class="game-howto" style="background:#f4f4fb;border-color:#e2e2f1;color:#6a6f9e;">
+        <div class="ht-ico" style="background:#7580BE18;color:#7580BE;"><i class="fa-solid fa-link"></i></div>
+        <div>Tap a <b style="color:#5658a8;">pose</b> on the left, then the <b style="color:#5658a8;">energy gift</b> it brings on the right. A glowing line connects each correct pair.</div>
+      </div>
       <div id="energy-board" style="position:relative;">
         <svg id="energy-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible;"></svg>
         <div style="position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:3rem;">
@@ -554,8 +573,8 @@ function initMatchGame() {
 
   matchSet.slice().sort(function(){return Math.random()-0.5;}).forEach(function(pose){
     var card=document.createElement('div');
-    card.className='match-card'; card.draggable=true;
-    card.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:14px;padding:10px;display:flex;flex-direction:column;align-items:center;text-align:center;';
+    card.className='match-card is-image'; card.draggable=true;
+    card.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:14px;padding:12px;display:flex;flex-direction:column;align-items:center;text-align:center;';
     card.innerHTML='<div style="width:100%;aspect-ratio:1;background:#faf0e6;border-radius:10px;margin-bottom:8px;padding:8px;display:flex;align-items:center;justify-content:center">'+poseSvg(pose.id,'#8a6f47')+'</div><div style="font-size:10px;color:#a68563;font-family:monospace;letter-spacing:.04em">'+pose.sanskrit+'</div>';
     card.dataset.id=pose.id;
     card.onclick=function(){ selectImageCard(card, pose.id); };
@@ -566,8 +585,8 @@ function initMatchGame() {
 
   matchSet.slice().sort(function(){return Math.random()-0.5;}).forEach(function(pose){
     var tc=document.createElement('div');
-    tc.className='match-card';
-    tc.style.cssText='background:#fff;border:1px solid #e8dcc8;border-radius:14px;padding:14px;';
+    tc.className='match-card is-text';
+    tc.style.cssText='background:#fff;border:2px solid #e8dcc8;border-radius:14px;padding:14px 16px;';
     tc.innerHTML='<div style="font-weight:600;font-size:1rem;color:#5c3a2a">'+pose.name+'</div><div style="color:#a68563;font-size:.8rem;margin-top:2px">'+pose.sanskrit+'</div><div style="font-size:.78rem;color:#9d7f68;margin-top:.4rem;line-height:1.45">'+pose.cue+'</div>';
     tc.dataset.id=pose.id;
     tc.onclick=function(){ selectTextCard(tc, pose.id); };
@@ -701,11 +720,12 @@ function updatePoseInfo(){
   else if(rd==='up'){ prE.innerHTML='Hold <b>↑</b> — inhale into '+nx.en; phE.textContent='INHALE ↑'; phE.style.color='#C8472A'; }
   else{ prE.innerHTML='Hold <b>↓</b> — exhale into '+nx.en; phE.textContent='EXHALE ↓'; phE.style.color='#2B6B5E'; }
 }
+var STEP_DEG=360/(N_P-1); /* arc sweeps one station-gap per breath step (11 gaps) */
 function bRender(){
   var a=sunSalPoses[bIdx], b=sunSalPoses[Math.min(bIdx+1,N_P-1)];
   drawFig(lerpP(a,b,eio(bProg)));
   var arc=document.getElementById('progress-arc');
-  if(arc) arc.setAttribute('d', arcPath(bDone?360:(bIdx+bProg)*30));
+  if(arc) arc.setAttribute('d', arcPath(bDone?360:(bIdx+bProg)*STEP_DEG));
 }
 function commitTrans(){
   bIdx++; bTrans++; if(bSmooth) bSmCount++; bProg=0; bSmooth=true;
