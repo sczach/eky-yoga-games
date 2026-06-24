@@ -48,6 +48,36 @@ ok(s.N === 12 && s.unique === 11, 'Sun salutation: 12 steps, 11 unique stations'
 ok(s.labels === 11, 'Sun salutation renders 11 clock labels');
 ok(Math.abs(s.step - 360/11) < 0.01, 'STEP_DEG derived from live length (360/11)');
 
+/* ---------- on-stage drag/hold instruction cues (mobile-friendly affordance) ---------- */
+let howto = await page.evaluate(() => ({
+  bannerText: document.querySelector('#breath-game .game-howto') ? document.querySelector('#breath-game .game-howto').textContent : '',
+  chevUpInvite: document.getElementById('breath-chev-up').classList.contains('invite'),
+  chevDownInvite: document.getElementById('breath-chev-down').classList.contains('invite')
+}));
+ok(/press[\s\S]*hold[\s\S]*drag/i.test(howto.bannerText), 'Sun Salutation shows a press-&-hold-&-drag how-to banner');
+ok(howto.chevUpInvite && howto.chevDownInvite, 'Both stage chevrons invite interaction before Start is pressed');
+
+await page.evaluate(() => sunFlow.start());
+await page.waitForTimeout(60);
+let chevTarget = await page.evaluate(() => ({
+  upTarget: document.getElementById('breath-chev-up').classList.contains('target'),
+  downTarget: document.getElementById('breath-chev-down').classList.contains('target'),
+  upInviteGone: !document.getElementById('breath-chev-up').classList.contains('invite')
+}));
+ok(chevTarget.upTarget !== chevTarget.downTarget, 'Exactly one chevron is marked as the needed direction once flowing');
+ok(chevTarget.upInviteGone, 'Invite bounce stops once the flow has started');
+
+let reqDir = await page.evaluate(() => { sunFlow.dir = sunFlow.reqDir(); return sunFlow.dir; });
+await page.waitForTimeout(60);
+let chevEngaged = await page.evaluate((rd) => {
+  const hit = document.getElementById(rd === 'up' ? 'breath-chev-up' : 'breath-chev-down');
+  const miss = document.getElementById(rd === 'up' ? 'breath-chev-down' : 'breath-chev-up');
+  return { hit: hit.classList.contains('engaged'), miss: miss.classList.contains('engaged') };
+}, reqDir);
+ok(chevEngaged.hit === true, 'Dragging/holding the correct direction lights up its chevron');
+ok(chevEngaged.miss === false, 'The opposite chevron stays unlit while only one direction is held');
+await page.evaluate(() => { sunFlow.dir = null; sunFlow.reset(); });
+
 let d = await runToDone('sunFlow');
 console.log('Sun run:', JSON.stringify(d));
 ok(d.done === true, 'Sun salutation reaches bDone via commitTrans()');
@@ -110,6 +140,14 @@ ok(w.linear === false, 'N>2 uses circular layout');
 // manual order is authoritative: stations follow the My Sequence list order verbatim
 ok(JSON.stringify(w.names) === JSON.stringify(['Warrior II','Tree Pose','Downward Dog',"Child's Pose"]),
    'Pose stations follow the user’s manual sequence order, not auto-sorted');
+
+let wfHowto = await page.evaluate(() => ({
+  bannerText: document.querySelector('#wellness-flow-overlay .game-howto') ? document.querySelector('#wellness-flow-overlay .game-howto').textContent : '',
+  chevUpInvite: document.getElementById('wf-chev-up').classList.contains('invite'),
+  chevDownInvite: document.getElementById('wf-chev-down').classList.contains('invite')
+}));
+ok(/press[\s\S]*hold[\s\S]*drag/i.test(wfHowto.bannerText), 'Animate-Sequence overlay shows the same press-&-hold-&-drag how-to banner');
+ok(wfHowto.chevUpInvite && wfHowto.chevDownInvite, 'Wellness stage chevrons also invite interaction before Start');
 
 /* breath-wave panel: separate, passive pranayama display */
 let bw = await page.evaluate(() => ({
